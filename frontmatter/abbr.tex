@@ -1,0 +1,10 @@
+% \begin{abbreviations}   \item[FTC] Fundamental Theorem of Calculus \item[FTC] Fundamental Theorem of Calculus2 \end{abbreviations}
+
+%\vspace{-1.0cm}
+\begingroup
+  \let\clearpage\relax
+  \let\cleardoublepage\relax
+  % #1 = titolo per il ToC (ignorato), #2 = titolo pagina (ignorato)
+  \renewcommand*{\glossarysection}[2][]{}
+  \printglossary[type=\acronymtype, style=abbrv, title={}]
+\endgroup

@@ -1,0 +1,34 @@
+\makeglossaries
+\setabbreviationstyle[acronym]{long-short}
+
+\newglossarystyle{abbrv}{
+  \setglossarystyle{long}% base a 2 colonne (longtable)
+  \renewcommand*{\glsgroupskip}{}% niente separatori di lettera
+  \renewcommand*{\glossentry}[2]{%
+    \glsentryitem{##1}%
+    \textbf{\textsc{\glsentryshort{##1}}} & % colonna sinistra
+    \glossentrydesc{##1}\\               % colonna destra
+  }%
+}
+
+\newacronym{llm}{LLM}{Large Language Model}
+\newacronym{mcp}{MCP}{Model Context Protocol}
+
+\newacronym{jni}{JNI}{Java Native Interface}
+\newacronym{ndk}{NDK}{Native Development Kit}
+\newacronym{art}{ART}{Android Runtime}
+\newacronym{apk}{APK}{Android Package}
+\newacronym{dex}{DEX}{Dalvik Executable}
+\newacronym{aosp}{AOSP}{Android Open Source Project}
+
+\newacronym{cve}{CVE}{Common Vulnerabilities and Exposures}
+\newacronym{cwe}{CWE}{Common Weakness Enumeration}
+\newacronym{cvss}{CVSS}{Common Vulnerability Scoring System}
+
+\newacronym{asan}{ASan}{AddressSanitizer}
+\newacronym{hwasan}{HWASan}{Hardware-assisted AddressSanitizer}
+\newacronym{aflpp}{AFL++}{American Fuzzy Lop++}
+\newacronym{libfuzzer}{libFuzzer}{LLVM In-Process Coverage-Guided Fuzzer}
+
+\newacronym{jit}{JIT}{Just-In-Time}
+\newacronym{aot}{AOT}{Ahead-Of-Time}

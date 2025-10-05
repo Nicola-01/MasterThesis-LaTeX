@@ -1,0 +1,35 @@
+%!TEX root = ../dissertation.tex
+
+\chapter{Introduction}
+\label{chp:intro}
+Android applications frequently embed native C/C++ libraries via the \gls{jni} to achieve low latency, reuse existing code, or access platform-specific functionality \cite{ndk-guide}. While this practice can deliver substantial performance benefits, it also imports the memory-unsafe semantics of C/C++ into an otherwise memory-safe application model, increasing the likelihood of buffer overflows, use-after-free, and other memory-corruption defects \cite{android-native-risk}. Because native code executes in the same process as the \gls{art}, a flaw in the native layer can compromise the entire app, irrespective of the safety of its Java/Kotlin components \cite{android-native-risk,art-doc}.
+
+Recent research has automated the generation of fuzzing harnesses and large-scale fuzzing for Android native libraries. POIROT synthesises consumer-specific harnesses that support bidirectional \gls{jni} interactions, then fuzzes them at scale, reporting 4{,}282 unique crashes across 3{,}967 popular apps and confirming multiple vulnerabilities \cite{poirot-usenix25}. Nevertheless, the subsequent step—triaging crashes to distinguish benign faults (e.g., null dereferences) from security-relevant memory errors—remains largely manual and time-consuming. Traditional crash bucketing and “exploitability” heuristics have been studied in the desktop/server domain, but offer limited precision and require substantial analyst oversight \cite{scb-ase18,igor-ccs21}.
+
+This thesis investigates whether a tool-grounded \gls{llm} can reduce manual effort and improve consistency in crash triage for Android native libraries. We propose an architecture in which POIROT produces crashes; an \gls{llm}-based triager consumes the associated reports and augments them with program context via the \gls{mcp}, invoking reverse-engineering tools (Jadx for Dalvik/bytecode and manifest, and Ghidra for native disassembly/decompilation) to recover stack evidence, function names, and short decompiled snippets \cite{mcp-overview,jadx-github,ghidra-github}. The triager classifies whether a crash likely indicates a vulnerability, explains the rationale in plain terms, provides a severity estimate anchored to standard taxonomies/scores (\gls{cwe}/\gls{cve}/\gls{cvss}), and suggests follow-up actions \cite{cwe-mitre,cve-overview,cvss31,cvss40}.
+
+\section{Research questions}
+\begin{enumerate}
+\item \textbf{RQ1:} Can a tool-grounded \gls{llm} triage POIROT crashes with accuracy competitive with human analysts on Android native libraries?
+\item \textbf{RQ2:} How does explicit tool context (Jadx/Ghidra via \gls{mcp}) affect triage precision/recall compared to \gls{llm}-only prompting?
+\item \textbf{RQ3:} What kinds of crashes benefit most from tool grounding (e.g., memory corruption vs.\ logic/argument errors)?
+\item \textbf{RQ4:} What confidence calibration and evidence anchoring strategies best support analyst verification at scale?
+\item \textbf{RQ5:} \textcolor{red}{Operational decision rule for “exploitable” (final definition to be aligned with the supervisor).}
+\end{enumerate}
+
+\section{Contributions}
+\begin{itemize}
+\item A triage pipeline that integrates POIROT crash artefacts with \gls{mcp}-grounded context from Jadx and Ghidra to produce verifiable, evidence-linked judgements.
+\item A classification schema mapping crashes to likely vulnerability presence and explaining causes with concise, source-linked evidence (stack frames, functions, minimal snippets).
+\item A severity estimation procedure aligned with \gls{cve}/\gls{cwe}/\gls{cvss}, including explicit assumptions and confidence reporting \cite{cwe-mitre,cve-overview,cvss31}.
+\item An evaluation on a corpus of POIROT-generated crashes, comparing \gls{llm}-only vs.\ tool-grounded triage, and measuring analyst effort saved.
+\end{itemize}
+
+\section{Method overview}
+We use POIROT to obtain crash reports and reproducer inputs \cite{poirot-usenix25}. The \gls{llm} triager, connected via \gls{mcp} \cite{mcp-overview}, retrieves relevant \gls{apk} bytecode/manifest context using Jadx and native code context using Ghidra \cite{jadx-github,ghidra-github}. The model then issues a decision (likely vulnerability vs.\ non-security crash), cites concrete evidence, and provides a severity indication cross-walked to standard taxonomies \cite{cwe-mitre,cve-overview,cvss31}. Where available, sanitizer diagnostics (e.g., \gls{asan}/\gls{hwasan}) and fuzzer metadata (e.g., \gls{aflpp}/\gls{libfuzzer}) are leveraged to strengthen the judgement \cite{asan-android-aosp,hwasan-ndk,aflpp-woot20,libfuzzer-llvm}.
+
+\section{Thesis outline}
+The remainder of this document is organised as follows. \emph{Background} formalises the Android app model, \gls{jni} boundary, native vulnerability classes, fuzzing/harness generation (including POIROT), crash triage concepts, and tool-grounded \gls{llm}s. \emph{Design} details the triage pipeline and evidence linking. \emph{Implementation} describes \gls{mcp} integration and tool adaptors. \emph{Evaluation} presents accuracy, calibration, and analyst-effort results. \emph{Related Work} contrasts contemporary fuzzing, crash analysis, and \gls{llm}-for-security studies. \emph{Conclusion} summarises findings and limitations.
+
+% \subsection*{Provisional references for the Introduction}
+% Android NDK guide \cite{ndk-guide}; Android guidance on native code risks \cite{android-native-risk}; ART overview \cite{art-doc}; POIROT \cite{poirot-usenix25}; AFL++ and libFuzzer \cite{aflpp-woot20,libfuzzer-llvm}; sanitizers \cite{asan-android-aosp,hwasan-ndk}; crash bucketing/triage \cite{scb-ase18,igor-ccs21}; \gls{mcp}, Jadx, and Ghidra \cite{mcp-overview,jadx-github,ghidra-github}; \gls{cwe}/\gls{cve}/\gls{cvss} \cite{cwe-mitre,cve-overview,cvss31,cvss40}.
