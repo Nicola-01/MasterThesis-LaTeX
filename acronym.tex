@@ -2,14 +2,15 @@
 \setabbreviationstyle[acronym]{long-short}
 
 \newglossarystyle{abbrv}{
-  \setglossarystyle{long}% base a 2 colonne (longtable)
-  \renewcommand*{\glsgroupskip}{}% niente separatori di lettera
-  \renewcommand*{\glossentry}[2]{%
-    \glsentryitem{##1}%
-    \textbf{\textsc{\glsentryshort{##1}}} & % colonna sinistra
-    \glossentrydesc{##1}\\               % colonna destra
-  }%
+    \setglossarystyle{long}% base a 2 colonne (longtable)
+      \renewcommand*{\glsgroupskip}{}% niente separatori di lettera
+      \renewcommand*{\glossentry}[2]{%
+            \glsentryitem{##1}\glstarget{##1}%
+            \textbf{\textsc{\glsentryshort{##1}}} & % colonna sinistra
+            \glossentrydesc{##1}\\               % colonna destra
+      }%
 }
+\setglossarystyle{abbrv}
 
 \newacronym{llm}{LLM}{Large Language Model}
 \newacronym{mcp}{MCP}{Model Context Protocol}

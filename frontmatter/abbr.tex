@@ -4,7 +4,17 @@
 \begingroup
   \let\clearpage\relax
   \let\cleardoublepage\relax
-  % #1 = titolo per il ToC (ignorato), #2 = titolo pagina (ignorato)
   \renewcommand*{\glossarysection}[2][]{}
-  \printglossary[type=\acronymtype, style=abbrv, title={}]
+  
+  \begin{flushleft}  % se vuoi spostarlo un poco
+  \hfill
+  \begin{minipage}{0.8\textwidth}
+    \printglossary[type=\acronymtype]
+  \end{minipage}
+  \hfill
+\end{flushleft}
+
 \endgroup
+
+
+
