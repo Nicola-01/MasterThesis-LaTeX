@@ -1,9 +1,77 @@
 \chapter{Background}
 \label{chp:backgroud}
 
+\section{Android Native}
+Android supports integrating C/C++ components into apps to meet strict latency requirements, reuse existing libraries, or access platform-specific functionality. At the platform level, native libraries are already pervasive: graphics stacks expose \emph{native} APIs (e.g., Vulkan via \texttt{libvulkan.so}) \cite{arch-vulkan}, media codecs are accessible through the NDK media interfaces (e.g., \texttt{AMediaCodec}) \cite{ndk-media}, machine-learning accelerators are targeted via the C-based \gls{nnapi} \cite{nnapi-ndk,nnapi-driver}, and the system C library itself is Bionic \cite{bionic-overview}. In apps, native code runs inside the app process and cooperates with the managed runtime across the \gls{jni} boundary \cite{jni-tips,jni-spec}. Note that distribution must account for CPU architecture: APKs package \texttt{.so} files per ABI (e.g., \texttt{arm64-v8a}, \texttt{x86\_64}) under \texttt{lib/<abi>/}, and Play requires a 64-bit variant whenever a 32-bit one is shipped \cite{ndk-abis,play-64bit}.
+
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}
+        \def\W{8cm}
+        \def\Wleft{4.46cm}
+        \def\Wright{3.47cm}
+        
+        \node[layer, fill=cSystem!60, minimum width=\W] (apps) {System Apps};
+        \node[layer, fill=cJava!60, minimum width=\W, below=0.5mm of apps] (java) {Java API Framework};
+        \node[layer, fill=cNative!60, minimum width=\Wleft, below=0.5mm of java, anchor=west] (native) at ($(java.south west)+(0,-3.5mm)$) {Native C/C++ Libraries};
+        \node[layer, fill=cRuntime!70, minimum width=\Wright, below=0.5mm of java, anchor=east] (runtime) at ($(java.south east)+(0,-3.5mm)$) {Android Runtime};
+        \node[layer, fill=cHAL!60, minimum width=\W, below=8mm of java] (hal) {Hardware Abstraction Layer (HAL)};
+        \node[layer, fill=cKernel!60, minimum width=\W, below=0.5mm of hal] (kernel) {Linux Kernel};
+    \end{tikzpicture}
+    \caption{Android software stack. }
+    \label{fig:androidStack}
+\end{figure}
+
+\subsection{NDK}
+The \gls{ndk} provides toolchains, headers, and stable native APIs (e.g., \texttt{libc}, \texttt{libm}, \texttt{libz}, OpenGL~ES) to build shared libraries for Android. Typical motivations include performance and library reuse, but developers should weigh added complexity and maintenance costs against benefits.
+
+\subsection{ABIs and packaging}
+Android supports multiple \gls{abi}s (e.g., \texttt{armeabi-v7a}, \texttt{arm64-v8a}, \texttt{x86}, \texttt{x86\_64}). Compiled libraries are packaged under \texttt{lib/<abi>/libName.so} inside the \gls{apk}. Only \gls{abi}s present in the APK are loadable on-device; shipping unnecessary ABIs increases size without benefit \cite{ndk-concepts}.
+
+
+\subsection{JNI}
+The \gls{jni} bridges managed and native worlds: Java/Kotlin can call C/C++ functions; native code can create/manipulate Java objects and call back into the VM. Beyond type mapping, correct management of references (local/global), threads, and exceptions is essential \cite{jni-tips}.
+
+\begin{lstlisting}[language=Java+JNI, caption={Classe Java con metodo \texttt{native}}]
+public class foo {
+    private native double bar(int i, String s);
+    
+    static {
+        System.loadLibrary("native-lib");
+    }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=C+JNI, caption={Implementazione JNI di \texttt{bar}}]
+jdouble Java_pkg_foo_bar(JNIEnv *env,   // ptr to JNI interface
+                         jobject obj,   // "this" pointer
+                         jint i,        // first "real" parameter
+                         jstring s)     // second "real" parameter
+{
+    /* Method implementation */
+    return 0.0;
+}
+\end{lstlisting}
+\paragraph{Explicit registration via \texttt{JNI\_OnLoad} and \texttt{RegisterNatives}.}
+Name-based binding can be replaced with an explicit map for clearer symbol control and faster loading. Recommended practice is to register in \texttt{JNI\_OnLoad} \cite{jni-wiki,ndk-visibility}.
+
+\subsection{Vulnerabilities and impact under the Android sandbox}
+Memory-safety bugs in native libraries (e.g., buffer overflows, out-of-bounds access, use-after-free) can yield \emph{app-compromise} (code execution or data exfiltration within the app UID) even when the managed layer is memory-safe. The Android application sandbox enforces per-UID isolation at the kernel level, strengthened by SELinux policy, which limits the direct blast radius to the permissions granted to the victim app \cite{android-app-sandbox,android-selinux,apsm-mayrhofer-2023}. In practice, this still covers sensitive assets (tokens, keystore-backed secrets, on-device content, and any resources accessible via the app’s declared permissions). Moreover, native vulnerabilities may act as stepping stones (e.g., pivoting through IPC endpoints) when combined with other weaknesses outside the app process. For engineering workflows, enabling \gls{hwasan} (preferable on modern \texttt{arm64}) or \gls{asan} in test builds materially improves detection fidelity and crash explainability, which is critical for downstream triage and exploitability assessment \cite{hwasan-aosp,asan-aosp,asan-ndk}.
+
+
+
+\subsection{Security and diagnostics (brief)}
+Because native code shares the app process, memory-safety bugs (e.g., buffer overflows, out-of-bounds access, use-after-free) can compromise integrity and confidentiality. During testing, enable sanitizers where feasible: \gls{asan} for detailed heap/stack diagnostics and \gls{hwasan} to catch temporal errors with lower overhead on ARMv8.5+ devices. These tools materially improve native defect detection during fuzzing and CI \cite{asan-aosp,hwasan-ndk}.
+
+
+
+
+\begin{comment}
 \section{Android application model and the \gls{jni} boundary}
 Android apps run atop the \gls{art}, which executes \gls{dex} bytecode produced from Java/Kotlin sources and provides GC, \gls{jit}/\gls{aot} compilation, and a rich managed environment \cite{art-doc}. The \gls{ndk} allows apps to integrate C/C++ code and access platform libraries; developers typically adopt native code to reuse libraries or meet strict latency/throughput requirements \cite{ndk-guide}. \gls{jni} defines the cross-language interface: Java can call into native functions and native code can create/manipulate Java objects and invoke Java methods \cite{jni-book,jni-tips}. This boundary is bidirectional and stateful, and errors at the native side can corrupt process memory, affecting overall app integrity \cite{android-native-risk}.
 
+\end{comment}
 \section{Memory safety differences and vulnerability classes}
 Java/Kotlin provide memory safety by construction (bounds checks, GC), whereas C/C++ delegate memory and lifetime management to the programmer, enabling classes of bugs that frequently underlie security vulnerabilities. Common weakness families include buffer overflow/underflow, use-after-free, out-of-bounds read/write, and double free; these are captured in \gls{cwe} and repeatedly observed in \gls{cve} records \cite{cwe-mitre,cve-overview}. On Android, such defects can lead to denial of service (crash) or arbitrary code execution, depending on mitigations and exploitability \cite{android-native-risk}.
 

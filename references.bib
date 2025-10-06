@@ -1,18 +1,3 @@
-@misc{ndk-guide,
-title = {Get started with the NDK},
-howpublished = {\url{https://developer.android.com/ndk/guides}}
-}
-
-@misc{android-native-risk,
-title = {Use of native code},
-howpublished = {\url{https://developer.android.com/privacy-and-security/risks/use-of-native-code}}
-}
-
-@misc{art-doc,
-title = {Android runtime (ART) and Dalvik},
-howpublished = {\url{https://source.android.com/docs/core/runtime}}
-}
-
 @book{jni-book,
 author = {Sheng Liang},
 title = {The Java Native Interface: Programmer's Guide and Specification},
@@ -28,14 +13,12 @@ howpublished = {\url{https://developer.android.com/ndk/guides/jni-tips}}
 }
 
 @inproceedings{poirot-usenix25,
-author = {Luca Di Bartolomeo and Philipp Mao and Yu-Jye Tung and Jessy Ayala and
-Samuele Doria and Paolo Celada and Marcel Busch and Joshua Garcia and
-Eleonora Losiouk and Mathias Payer},
-title = {Hercules Droidot and the murder on the JNI Express},
-booktitle = {Proceedings of the 34th USENIX Security Symposium},
-year = {2025},
-address = {Seattle, WA, USA},
-url = {https://www.usenix.org/system/files/usenixsecurity25-di-bartolomeo.pdf}
+  title={Hercules Droidot and the murder on the $\{$JNI$\}$ Express},
+  author={Di Bartolomeo, Luca and Mao, Philipp and Tung, Yu-Jye and Ayala, Jessy and Doria, Samuele and Celada, Paolo and Busch, Marcel and Garcia, Joshua and Losiouk, Eleonora and Payer, Mathias},
+  booktitle={34th USENIX Security Symposium (USENIX Security 25)},
+  pages={3257--3275},
+  year={2025},
+  url={https://www.usenix.org/conference/usenixsecurity25/presentation/di-bartolomeo}
 }
 
 @inproceedings{aflpp-woot20,
@@ -61,27 +44,6 @@ title = {HWAddress Sanitizer - NDK},
 howpublished = {\url{https://developer.android.com/ndk/guides/hwasan}}
 }
 
-@misc{cwe-mitre,
-title = {Common Weakness Enumeration (CWE)},
-howpublished = {\url{https://cwe.mitre.org/}}
-}
-
-@misc{cve-overview,
-title = {Common Vulnerabilities and Exposures (CVE) --- Overview},
-howpublished = {\url{https://www.cve.org/about/overview}}
-}
-
-@techreport{cvss31,
-title = {Common Vulnerability Scoring System v3.1: Specification Document},
-institution = {FIRST},
-year = {2019},
-url = {https://www.first.org/cvss/v3-1/cvss-v31-specification_r1.pdf}
-}
-
-@misc{cvss40,
-title = {Common Vulnerability Scoring System v4.0},
-howpublished = {\url{https://www.first.org/cvss/v4-0/}}
-}
 
 @inproceedings{scb-ase18,
 author = {Md Johirul Islam and Ripon K. Saha and Mukul R. Prasad and Baishakhi Ray},
@@ -99,20 +61,6 @@ year = {2021},
 note = {Project page: \url{https://www.microsoft.com/en-us/research/project/igor/}}
 }
 
-@misc{mcp-overview,
-title = {Model Context Protocol (MCP)},
-howpublished = {\url{https://modelcontextprotocol.io/}}
-}
-
-@misc{jadx-github,
-title = {jadx: Dex to Java decompiler},
-howpublished = {\url{https://github.com/skylot/jadx}}
-}
-
-@misc{ghidra-github,
-title = {Ghidra: A software reverse engineering (SRE) framework},
-howpublished = {\url{https://github.com/NationalSecurityAgency/ghidra}}
-}
 
 @inproceedings{atlas-issta24,
 author = {Authors omitted here},
@@ -192,4 +140,63 @@ url = {https://arxiv.org/abs/2412.06754}
   howpublished = {\url{https://github.com/suidpit/ghidra-mcp}},
   year = {2025},
   note = {GitHub repository (accessed 2025-10-03)}
+}
+
+@misc{statcounter-android-2025,
+  title        = {Mobile Operating System Market Share Worldwide — September 2025},
+  howpublished = {\url{https://gs.statcounter.com/os-market-share/mobile/worldwide}},
+  note         = {Accessed 2025-10-06}
+}
+
+@inproceedings{acar-sp16,
+  author    = {Yasemin Acar and Michael Backes and Sven Bugiel and Sascha Fahl and Patrick McDaniel and Matthew Smith},
+  title     = {SoK: Lessons Learned from Android Security Research for Appified Software Platforms},
+  booktitle = {2016 IEEE Symposium on Security and Privacy (SP)},
+  year      = {2016},
+  pages     = {433--451},
+  doi       = {10.1109/SP.2016.33},
+  url       = {https://oaklandsok.github.io/papers/acar2016.pdf}
+}
+
+@article{mayrhofer-apsm-2023,
+  author  = {Ren{\'e} Mayrhofer and Jeffrey Vander Stoep and Chad Brubaker and Dianne Hackborn and Bram Bonn{\'e} and G{\"u}liz Seray Tuncay and Roger Piqueras Jover and Michael A. Specter},
+  title   = {The Android Platform Security Model},
+  journal = {arXiv},
+  year    = {2023},
+  eprint  = {1904.05572},
+  url     = {https://arxiv.org/abs/1904.05572}
+}
+
+@misc{p0-qmage,
+  author       = {Mateusz Jurczyk},
+  title        = {MMS Exploit Part 5: Defeating Android ASLR, Getting RCE},
+  howpublished = {\url{https://googleprojectzero.blogspot.com/2020/08/mms-exploit-part-5-defeating-aslr-getting-rce.html}},
+  year         = {2020}
+}
+
+@inproceedings{almanee-icse21,
+  author    = {Sumaya Almanee and Arda {\"U}nal and Mathias Payer and Joshua Garcia},
+  title     = {Too Quiet in the Library: An Empirical Study of Security Updates in Android Apps' Native Code},
+  booktitle = {2021 IEEE/ACM 43rd International Conference on Software Engineering (ICSE)},
+  year      = {2021},
+  pages     = {1347--1359},
+  doi       = {10.1109/ICSE43902.2021.00122},
+  url       = {https://dl.acm.org/doi/10.1109/ICSE43902.2021.00122}
+}
+
+@inproceedings{mergendahl-ndss22,
+  author    = {Samuel Mergendahl and Nathan Burow and Hamed Okhravi},
+  title     = {Cross-Language Attacks},
+  booktitle = {Network and Distributed System Security Symposium (NDSS)},
+  year      = {2022},
+  url       = {https://www.ndss-symposium.org/wp-content/uploads/2022-78-paper.pdf}
+}
+
+
+@inproceedings{utopia-sp23,
+  author    = {Bokdeuk Jeong and Joonun Jang and Hayoon Yi and Jiin Moon and Junsik Kim and Intae Jeon and Taesoo Kim and WooChul Shim and Yong Ho Hwang},
+  title     = {UTOPIA: Automatic Generation of Fuzz Driver using Unit Tests},
+  booktitle = {2023 IEEE Symposium on Security and Privacy (SP)},
+  year      = {2023},
+  url       = {https://gts3.org/assets/papers/2023/jeong%3Autopia.pdf}
 }

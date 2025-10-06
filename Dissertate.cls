@@ -114,6 +114,7 @@
 %\usepackage[table,xcdraw]{xcolor}
 \usepackage{xcolor}
 \usepackage{tikz}
+\usetikzlibrary{positioning} 
 \usepackage{pgfplots}
 \pgfplotsset{compat=newest} 
 \pgfplotsset{plot coordinates/math parser=false} 
@@ -213,7 +214,8 @@
 \def\university#1{\gdef\@university{#1}}
 
 % School color 
-\definecolor{SchoolColor}{rgb}{0.71, 0, 0.106} % UNIPD red
+% \definecolor{SchoolColor}{rgb}{0.71, 0, 0.106} % UNIPD red
+\definecolor{SchoolColor}{HTML}{9c0015} % UNIPD red
 \definecolor{chaptergrey}{rgb}{0.61, 0, 0.09} % dialed back a little
 \definecolor{midgrey}{rgb}{0.4, 0.4, 0.4}
 
@@ -382,7 +384,9 @@
 
 % Listing
 \usepackage{listings}
-\lstdefinelanguage{json}{
+
+\begin{comment}
+    \lstdefinelanguage{json}{
     string=[s]{"}{"},
     stringstyle=\color{SchoolColor},
     comment=[l]{:},
@@ -396,3 +400,96 @@
     breaklines=true,
     frame=lines
 }
+\end{comment}
+
+\definecolor{CodeGray}{gray}{0.3}
+\definecolor{backcolour}{HTML}{F7F7F2}
+\definecolor{vscFg}{HTML}{D4D4D4}
+\definecolor{vscPurple}{HTML}{C586C0} % keywords
+\definecolor{vscTeal}{HTML}{4EC9B0}   % types / classes
+\definecolor{vscOrange}{HTML}{CE9178} % strings
+\definecolor{vscGreen}{HTML}{6A9955}  % comments
+\definecolor{vscYellow}{HTML}{DCDCAA} % function/decl names (optional)
+\definecolor{vscGutter}{HTML}{858585} % line numbers
+\definecolor{keyword1}{HTML}{363457} % line numbers
+% \definecolor{keyword2}{HTML}{363457} % line numbers
+\definecolor{keyword2}{HTML}{383F51} % line numbers
+\definecolor{keyword3}{HTML}{E05A13} % line numbers
+\definecolor{stringColor}{HTML}{363457} % line numbers
+
+\lstdefinestyle{code}{
+    basicstyle=\small\ttfamily,
+    numbers=left,
+    numberstyle=\scriptsize\color{CodeGray},
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    tabsize=2,
+    breaklines=true,
+    frame=lines,
+    rulecolor=\color{black!20},
+    backgroundcolor=\color{backcolour}, 
+    keywordstyle=\bfseries\color{SchoolColor},      % classica keyword
+    keywordstyle=[2]\bfseries\color{keyword2},     % tipi / classi
+    keywordstyle=[3]\bfseries\color{keyword3},   % nomi funzione (se marcati)
+    stringstyle=\color{stringColor},
+    commentstyle=\itshape\color{CodeGray},
+    captionpos=b,
+    keepspaces=true
+}
+
+\lstdefinelanguage{Java+JNI}[]{Java}{
+    deletekeywords={int,double,boolean,long,short,byte,char,float,void,native},
+    morekeywords={native,System,package,import},
+    morekeywords=[2]{int,double,boolean,long,short,byte,char,float,void,
+                   String,Object,Class},
+    morekeywords=[3]{module,requires,open,opens,uses,provides,transitive,record,var,
+                native,System,loadLibrary},
+}
+
+\lstdefinelanguage{C+JNI}[]{C}{
+    morekeywords={JNIEnv,jobject,jint,jdouble,jstring,JNIEXPORT,JNICALL},
+}
+
+\lstdefinelanguage{C++/JNI}[]{C++}{
+    morekeywords={JNIEnv,jobject,jint,jdouble,jstring,JNIEXPORT,JNICALL},
+    morekeywords=[2]{int,double,boolean,long,short,byte,char,float,void,
+                   String,Object,Class},
+}
+
+\lstdefinelanguage{json}{
+  string=[s]{"}{"},
+  stringstyle=\color{SchoolColor},
+  comment=[l]{:},
+  commentstyle=\color{black},
+  basicstyle=\small\ttfamily,
+  numbers=left,
+  numberstyle=\scriptsize,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=lines
+}
+
+\lstset{style=code}
+
+\definecolor{cSystem}{RGB}{0,188,212}
+\definecolor{cJava}{RGB}{139,195,74}
+\definecolor{cNative}{RGB}{156,107,197}
+\definecolor{cRuntime}{RGB}{255,193,7}
+\definecolor{cHAL}{RGB}{0,188,212}
+\definecolor{cKernel}{RGB}{244,81,30}
+\definecolor{cPM}{RGB}{244,81,30}
+
+\tikzset{
+  layer/.style={
+    rounded corners=3pt,
+    draw=black!30,
+    align=center,
+    minimum height=7mm
+  }
+}
+
+\usepackage{caption}
+\captionsetup{justification=centering, singlelinecheck=false}

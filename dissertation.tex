@@ -3,6 +3,7 @@
 
 \documentclass{Dissertate}
 
+
 \input{acronym}
 
 \begin{document}
@@ -13,6 +14,7 @@
     \setstretch{\dnormalspacing}
     
     % chapters
+    \glsresetall[acronym]
     \setcounter{chapter}{0}
     \include{chapters/1_Introduction}
     \include{chapters/2_Background}
@@ -22,7 +24,7 @@
     \include{chapters/6_ExperimEvaluation}
     \include{chapters/7_Discussion}
     \include{chapters/8_Conclusion}
-
+    
     % \include{chapters/dataset}
     % \include{chapters/models}
     % \include{chapters/results}
