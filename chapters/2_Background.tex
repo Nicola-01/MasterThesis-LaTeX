@@ -2,8 +2,9 @@
 \label{chp:backgroud}
 
 \section{Android Native}
-Android supports integrating C/C++ components into apps to meet strict latency requirements, reuse existing libraries, or access platform-specific functionality. At the platform level, native libraries are already pervasive: graphics stacks expose \emph{native} APIs (e.g., Vulkan via \texttt{libvulkan.so}) \cite{arch-vulkan}, media codecs are accessible through the NDK media interfaces (e.g., \texttt{AMediaCodec}) \cite{ndk-media}, machine-learning accelerators are targeted via the C-based \gls{nnapi} \cite{nnapi-ndk,nnapi-driver}, and the system C library itself is Bionic \cite{bionic-overview}. In apps, native code runs inside the app process and cooperates with the managed runtime across the \gls{jni} boundary \cite{jni-tips,jni-spec}. Note that distribution must account for CPU architecture: APKs package \texttt{.so} files per ABI (e.g., \texttt{arm64-v8a}, \texttt{x86\_64}) under \texttt{lib/<abi>/}, and Play requires a 64-bit variant whenever a 32-bit one is shipped \cite{ndk-abis,play-64bit}.
+Android uses native C/C++ libraries at the \emph{platform} level: core components and services (e.g., runtime, HAL, system libraries) are implemented in native code, and the framework exposes part of this functionality to apps through Java/Kotlin \gls{api}s \cite{android-platform}. When third-party developers need to include their own C/C++ code, for example, to meet real-time constraints, reuse existing native libraries, or interface with vendor-specific hardware, he \gls{ndk} provides the toolchains and headers required to build and link native components that can be packaged within the \gls{apk}. At the system level, Android’s C library and dynamic linker are provided by \emph{Bionic}, the platform’s libc/libm/libdl stack \cite{bionic-maint}. In apps, these native components run inside the same process as the managed code and communicate with it through the \gls{jni} boundary \cite{jni-tips}. Figure~\ref{fig:androidStack} represents the Android platform architecture.
 
+This capability of use native code, extends the reach of Android apps beyond the managed runtime but also introduces explicit responsibilities for developers. Native code must handle its own memory management, threading and exception handling. This is significantly different from pure Java/Kotlin development.
 
 \begin{figure}
     \centering
@@ -24,16 +25,24 @@ Android supports integrating C/C++ components into apps to meet strict latency r
 \end{figure}
 
 \subsection{NDK}
-The \gls{ndk} provides toolchains, headers, and stable native APIs (e.g., \texttt{libc}, \texttt{libm}, \texttt{libz}, OpenGL~ES) to build shared libraries for Android. Typical motivations include performance and library reuse, but developers should weigh added complexity and maintenance costs against benefits.
+The \gls{ndk} is a collection of tools, headers, and libraries that enable developers to embed C and C++ code within Android applications and interact natively with hardware, sensors, and system \gls{api}s \cite{android-ndk-getting-started}. The \gls{ndk} supports compilation into shared (and static) libraries that can be packaged inside the \gls{apk}, and offers native interfaces for tasks such as sensor input, asset loading, and more \cite{android-ndk-concepts}.
 
-\subsection{ABIs and packaging}
-Android supports multiple \gls{abi}s (e.g., \texttt{armeabi-v7a}, \texttt{arm64-v8a}, \texttt{x86}, \texttt{x86\_64}). Compiled libraries are packaged under \texttt{lib/<abi>/libName.so} inside the \gls{apk}. Only \gls{abi}s present in the APK are loadable on-device; shipping unnecessary ABIs increases size without benefit \cite{ndk-concepts}.
+Developers typically adopt native code for three main reasons:
+\begin{itemize}
+  \item \textbf{Performance optimization:} achieving low-latency processing in compute-intensive domains such as graphics, signal processing, physics, or cryptography.
+  \item \textbf{Library reuse:} integrating existing C/C++ libraries (e.g.\ cryptography, compression, codecs) to avoid rewriting functionality in Java/Kotlin.
+  \item \textbf{Hardware or vendor-specific access:} interacting directly with low-level or proprietary \gls{api}s (e.g.\ custom sensors, specialized accelerators) not exposed in the Java framework.
+\end{itemize}
+
+However, using the \gls{ndk} comes with tradeoffs. Native development adds complexity in build configuration, cross-ABI support, debugging, and maintenance across Android versions. Not all Android \gls{api}s are directly available through the \gls{ndk}, so bridging via \gls{jni} is often required for broad framework functionality \cite{android-ndk-concepts}. 
 
 
 \subsection{JNI}
-The \gls{jni} bridges managed and native worlds: Java/Kotlin can call C/C++ functions; native code can create/manipulate Java objects and call back into the VM. Beyond type mapping, correct management of references (local/global), threads, and exceptions is essential \cite{jni-tips}.
+The \gls{jni} (Java Native Interface) is a native programming interface that enables Java or Kotlin code running in a virtual machine to interoperate with libraries and applications written in C/C++ \cite{jni-spec-design,jni-spec-intro}. It allows managed code to call into native code, and for native code to call back into the \gls{vm}, manipulate Java objects, throw exceptions, and more. The \gls{jni} is designed to impose no restrictions on the implementation of the \gls{vm}, thereby preserving binary compatibility across \gls{vm} vendors \cite{jni-spec-intro}.  
 
-\begin{lstlisting}[language=Java+JNI, caption={Classe Java con metodo \texttt{native}}]
+Listing~\ref{lst:javaNative} shows a Java class declaring a \texttt{native} method, while Listing~\ref{lst:JNI} gives the corresponding C implementation on the native side.
+
+\begin{lstlisting}[language=Java+JNI, caption={Java class declaring a \texttt{native} method}, label={lst:javaNative}] 
 public class foo {
     private native double bar(int i, String s);
     
@@ -43,7 +52,7 @@ public class foo {
 }
 \end{lstlisting}
 
-\begin{lstlisting}[language=C+JNI, caption={Implementazione JNI di \texttt{bar}}]
+\begin{lstlisting}[language=C+JNI, caption={Native implementation of \texttt{bar}}, label={lst:JNI}]
 jdouble Java_pkg_foo_bar(JNIEnv *env,   // ptr to JNI interface
                          jobject obj,   // "this" pointer
                          jint i,        // first "real" parameter
@@ -53,12 +62,10 @@ jdouble Java_pkg_foo_bar(JNIEnv *env,   // ptr to JNI interface
     return 0.0;
 }
 \end{lstlisting}
-\paragraph{Explicit registration via \texttt{JNI\_OnLoad} and \texttt{RegisterNatives}.}
-Name-based binding can be replaced with an explicit map for clearer symbol control and faster loading. Recommended practice is to register in \texttt{JNI\_OnLoad} \cite{jni-wiki,ndk-visibility}.
+
 
 \subsection{Vulnerabilities and impact under the Android sandbox}
 Memory-safety bugs in native libraries (e.g., buffer overflows, out-of-bounds access, use-after-free) can yield \emph{app-compromise} (code execution or data exfiltration within the app UID) even when the managed layer is memory-safe. The Android application sandbox enforces per-UID isolation at the kernel level, strengthened by SELinux policy, which limits the direct blast radius to the permissions granted to the victim app \cite{android-app-sandbox,android-selinux,apsm-mayrhofer-2023}. In practice, this still covers sensitive assets (tokens, keystore-backed secrets, on-device content, and any resources accessible via the app’s declared permissions). Moreover, native vulnerabilities may act as stepping stones (e.g., pivoting through IPC endpoints) when combined with other weaknesses outside the app process. For engineering workflows, enabling \gls{hwasan} (preferable on modern \texttt{arm64}) or \gls{asan} in test builds materially improves detection fidelity and crash explainability, which is critical for downstream triage and exploitability assessment \cite{hwasan-aosp,asan-aosp,asan-ndk}.
-
 
 
 \subsection{Security and diagnostics (brief)}
@@ -78,7 +85,7 @@ Java/Kotlin provide memory safety by construction (bounds checks, GC), whereas C
 \section{Fuzzing native libraries and harness generation}
 Coverage-guided fuzzing mutates inputs to maximise code coverage while detecting crashes via sanitizers or OS signals. \gls{aflpp} generalises AFL’s greybox approach and incorporates state-of-the-art features (e.g., custom mutators) for broad applicability \cite{aflpp-woot20}. \gls{libfuzzer} integrates tightly with LLVM sanitizers and is widely used for in-process targets \cite{libfuzzer-llvm}. Sanitizers such as \gls{asan} and \gls{hwasan} are available on Android and provide precise diagnostics for memory-safety violations \cite{asan-android-aosp,hwasan-ndk}.
 
-The limiting factor for library fuzzing is the harness: an executable environment that exercises target APIs with realistic sequences and well-formed objects. Automating harness synthesis for Android native libraries is challenging due to cross-language interactions, complex object lifecycles, and the need to emulate app-specific call sequences via \gls{jni}. POIROT addresses these challenges by statically analysing an app’s Java-side usage of the native library, synthesising a consumer-specific harness that supports bidirectional \gls{jni}, and running large-scale fuzzing campaigns \cite{poirot-usenix25}. Prior works on harness generation and Android library fuzzing (e.g., ATLAS, FuzzGen) highlight the broader landscape and the difficulty of scaling without app-specific context \cite{atlas-issta24,fuzzgen-usenix20}.
+The limiting factor for library fuzzing is the harness: an executable environment that exercises target \gls{api}s with realistic sequences and well-formed objects. Automating harness synthesis for Android native libraries is challenging due to cross-language interactions, complex object lifecycles, and the need to emulate app-specific call sequences via \gls{jni}. POIROT addresses these challenges by statically analysing an app’s Java-side usage of the native library, synthesising a consumer-specific harness that supports bidirectional \gls{jni}, and running large-scale fuzzing campaigns \cite{poirot-usenix25}. Prior works on harness generation and Android library fuzzing (e.g., ATLAS, FuzzGen) highlight the broader landscape and the difficulty of scaling without app-specific context \cite{atlas-issta24,fuzzgen-usenix20}.
 
 \section{Crash triage: principles and challenges}
 Crash triage seeks to (i) deduplicate and bucket crashes, (ii) decide whether a crash indicates a security-relevant vulnerability, and (iii) prioritise fixes. Heuristic exploitability assessors and semantic crash bucketing methods have been proposed to improve accuracy and scalability, yet they typically assume desktop/server contexts and still require expert review \cite{scb-ase18,igor-ccs21}. On Android, crashes often originate in native code called through \gls{jni} and may depend on app-specific object invariants; reproducing and interpreting them benefits from reverse-engineering and sanitizer evidence \cite{poirot-usenix25,asan-android-aosp}.

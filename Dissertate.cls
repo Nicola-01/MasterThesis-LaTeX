@@ -77,7 +77,9 @@
 \RequirePackage{amsmath}
 \RequirePackage{amssymb}
 
+\RequirePackage{hyperref}
 \usepackage[acronym,automake]{glossaries-extra}
+\usepackage[acronym,toc]{glossaries}
 % Fonts.
 \RequirePackage{color}
 
@@ -87,7 +89,7 @@
 \renewcommand{\subsectionautorefname}{Subsection}
 \RequirePackage{url}
 \Urlmuskip = 0mu plus 1mu
-\RequirePackage{hyperref}
+
 
 \RequirePackage{mathspec}
 \setmathsfont(Digits,Latin,Greek)[Numbers={Proportional}]{EB Garamond}
@@ -219,12 +221,17 @@
 \definecolor{chaptergrey}{rgb}{0.61, 0, 0.09} % dialed back a little
 \definecolor{midgrey}{rgb}{0.4, 0.4, 0.4}
 
+\definecolor{linkGray}{gray}{0.3}
+
 \hypersetup{
     colorlinks,
-    citecolor=SchoolColor,
+    %citecolor=SchoolColor,
+    %citecolor=linkGray,
+    citecolor=black,
     filecolor=black,
     linkcolor=black,
-    urlcolor=SchoolColor,
+    %urlcolor=SchoolColor,
+    urlcolor=linkGray,
 }
 
 \renewcommand{\frontmatter}{
@@ -447,14 +454,9 @@
                 native,System,loadLibrary},
 }
 
-\lstdefinelanguage{C+JNI}[]{C}{
-    morekeywords={JNIEnv,jobject,jint,jdouble,jstring,JNIEXPORT,JNICALL},
-}
-
-\lstdefinelanguage{C++/JNI}[]{C++}{
-    morekeywords={JNIEnv,jobject,jint,jdouble,jstring,JNIEXPORT,JNICALL},
-    morekeywords=[2]{int,double,boolean,long,short,byte,char,float,void,
-                   String,Object,Class},
+\lstdefinelanguage{C+JNI}[]{C++}{
+    deletekeywords={int,double,boolean,long,short,byte,char,float,void,native},
+    morekeywords=[2]{JNIEnv,jobject,jint,jdouble,jstring,JNIEXPORT,JNICALL},
 }
 
 \lstdefinelanguage{json}{
@@ -478,7 +480,7 @@
 \definecolor{cJava}{RGB}{139,195,74}
 \definecolor{cNative}{RGB}{156,107,197}
 \definecolor{cRuntime}{RGB}{255,193,7}
-\definecolor{cHAL}{RGB}{0,188,212}
+\definecolor{cHAL}{RGB}{116, 208, 219}
 \definecolor{cKernel}{RGB}{244,81,30}
 \definecolor{cPM}{RGB}{244,81,30}
 
