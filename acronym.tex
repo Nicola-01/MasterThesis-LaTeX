@@ -5,7 +5,7 @@
     \setglossarystyle{long}% base a 2 colonne (longtable)
       \renewcommand*{\glsgroupskip}{}% niente separatori di lettera
       \renewcommand*{\glossentry}[2]{%
-            \glsentryitem{##1}\glstarget{##1}%
+            \glstarget{##1}\glsentryitem{##1}%
             \textbf{\textsc{\glsentryshort{##1}}} & % colonna sinistra
             \glossentrydesc{##1}\\               % colonna destra
       }%
@@ -25,6 +25,8 @@
 \newacronym{aosp}{AOSP}{Android Open Source Project}
 \newacronym{nnapi}{NNAPI}{Android Neural Networks }
 \newacronym{vm}{VM}{Virtual Machine}
+
+\newacronym{uid}{UID}{Unique User ID}
 
 \newacronym{cve}{CVE}{Common Vulnerabilities and Exposures}
 \newacronym{cwe}{CWE}{Common Weakness Enumeration}
