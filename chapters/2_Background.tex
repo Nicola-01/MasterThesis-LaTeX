@@ -16,19 +16,9 @@ This capability of use native code, extends the reach of Android apps beyond the
 
 \begin{figure}
     \centering
-    \begin{tikzpicture}
-        \def\W{8cm}
-        \def\Wleft{4.46cm}
-        \def\Wright{3.47cm}
-        
-        \node[layer, fill=cSystem!60, minimum width=\W] (apps) {System Apps};
-        \node[layer, fill=cJava!60, minimum width=\W, below=0.5mm of apps] (java) {Java API Framework};
-        \node[layer, fill=cNative!60, minimum width=\Wleft, below=0.5mm of java, anchor=west] (native) at ($(java.south west)+(0,-3.5mm)$) {Native C/C++ Libraries};
-        \node[layer, fill=cRuntime!70, minimum width=\Wright, below=0.5mm of java, anchor=east] (runtime) at ($(java.south east)+(0,-3.5mm)$) {Android Runtime};
-        \node[layer, fill=cHAL!60, minimum width=\W, below=8mm of java] (hal) {Hardware Abstraction Layer (HAL)};
-        \node[layer, fill=cKernel!60, minimum width=\W, below=0.5mm of hal] (kernel) {Linux Kernel};
-    \end{tikzpicture}
-    \caption{Android software stack. }
+    \input{tikzpicture/androidStack}
+    \caption[Android software stack.]%
+    {Android software stack \cite{android-platform}}
     \label{fig:androidStack}
 \end{figure}
 
@@ -71,49 +61,142 @@ jdouble Java_pkg_foo_bar(JNIEnv *env,   // ptr to JNI interface
 \end{lstlisting}
 
 
-\subsection{Vulnerabilities and Impact on the Android Sandbox}
-Native memory-safety bugs remain the dominant path to serious compromise on Android. Although the platform’s sandbox assigns each app a distinct UID and constrains it further with SELinux policies, a native component compromised inside that boundary still runs with the app’s privileges and can expose any secrets or capabilities already permitted (e.g., tokens, stored content, or keys) \cite{android-app-sandbox,android-selinux}. In practice, this turns local corruption into high-impact data access or control-flow hijacking even without crossing process boundaries.
+\begin{comment}
+    \subsection{Vulnerabilities} %  and Impact on the Android Sandbox
+Bugs in native memory safety remain the main cause of serious compromise on Android. 
+Although the platform’s sandbox assigns each app a distinct \gls{uid} and constrains it further with SELinux policies, a native component compromised inside that boundary still runs with the app’s privileges and can expose any secrets or capabilities already permitted (e.g., tokens, stored content, or keys) \cite{android-app-sandbox,android-selinux}. In practice, this turns local corruption into high-impact data access or control-flow hijacking even without crossing process boundaries.
+Memory-safety defects in native libraries, such as buffer overflows, out-of-bounds reads/writes, use-after-free, and double free, belong to well-known categories captured by \gls{cwe}, and they frequently appear in \gls{cve} records \cite{cwe-mitre,cve-overview}. On Android, these errors may manifest as application crashes, or in more severe cases permit arbitrary code execution or data tampering, depending on mitigations and exploitability assumptions \cite{android-native-risk}. 
 
-Attackers often amplify impact by chaining flaws across interfaces. Many system services are native and reachable over Binder; memory corruption in such a service can be triggered via IPC by a malicious client to escape app-level limits \cite{mao-nass-usenix25}. Within the same process, unsafe native–Java bridges (JNI, shared memory) or misuse of memory-protection syscalls (e.g., \texttt{mprotect}) can subvert runtime invariants, enabling code injection or manipulation of JIT/class metadata \cite{going-native-ndss17}. A further, pragmatic risk is “patch latency”: empirical studies show popular apps frequently ship outdated third-party native libraries with known CVEs for months to years, leaving well-documented bugs exploitable long after fixes exist \cite{almanee-icse21}. 
+
+Attackers often amplify impact by chaining flaws across interfaces. Many system services are native and reachable over Binder; memory corruption in such a service can be triggered via \gls{ipc} by a malicious client to escape app-level limits \cite{mao-nass-usenix25}. 
+
+In other scenarios, native code may corrupt memory pages shared with the managed runtime (e.g. altering \gls{jni} or class metadata) by transgressing memory protection via system calls (e.g. \texttt{mprotect}), thus undermining Java-level safety invariants and enabling code injection or VM subversion \cite{going-native-ndss17}. 
+Another common vector is outdated third-party native libraries: empirical studies show that a significant fraction of popular apps ship unpatched vulnerable native libraries, and that developers take on average hundreds of days to apply upstream patches \cite{almanee-icse21}. This “patch latency” enables attackers to exploit known vulnerabilities even in apps that seem benign at the Java layer.  
 
 Mitigation requires defense-in-depth: modern Android hardening (ASLR/DEP, control-flow integrity, memory tagging), combined with strict interface design and timely library updates, can substantially raise exploitation cost even when bugs persist \cite{android-ndk-mte}. 
+\end{comment}
+
+\subsection{Vulnerabilities and Impact on the Android Sandbox}
+Native memory-safety bugs remain a dominant cause of serious compromise on Android. Although the platform’s sandbox assigns each app a distinct \gls{uid} and further constrains it with SELinux policies, a native component compromised inside that boundary still runs with the app’s privileges and can expose secrets or capabilities already permitted (e.g., tokens, stored content, keys) \cite{android-app-sandbox,android-selinux}. In practice, this turns local corruption into high-impact data access or control-flow hijacking even without crossing process boundaries.
+
+Memory-safety defects in native libraries, such as buffer overflows, out-of-bounds reads/writes, use-after-free, and double free, belong to well-known \gls{cwe} families and frequently appear in \gls{cve} records \cite{cwe-mitre,cve-overview}. On Android, these errors may cause crashes or, in more severe cases, permit arbitrary code execution or data tampering depending on mitigations and exploitability assumptions \cite{android-native-risk}.
+
+Attackers often amplify impact by chaining flaws across interfaces. Many system services are native and reachable over Binder; memory corruption in such a service can be triggered via \gls{ipc} by a malicious client to bypass app-level limits \cite{mao-nass-usenix25}. In other scenarios, native code may corrupt memory shared with the managed runtime (e.g., altering \gls{jni} or class metadata) by abusing memory-protection system calls, undermining Java-level safety invariants and enabling code injection or \gls{vm} subversion \cite{going-native-ndss17}. Another common vector is outdated third-party native libraries: empirical studies show that a significant fraction of popular apps ship unpatched vulnerable native libraries, and that developers take on average hundreds of days to apply upstream patches \cite{almanee-icse21}. This patch latency enables exploitation of known bugs even in apps that appear benign at the Java layer.
+
+Mitigation requires defense-in-depth: modern Android hardening (\gls{aslr}/\gls{dep}, control-flow integrity, memory tagging), combined with strict interface design and timely library updates, can significantly reduce the feasibility and reliability of exploitation even when bugs persist \cite{android-ndk-mte}.
+
+\section{Fuzzing}
+Fuzzing is an automated testing technique that repeatedly executes a target program with many inputs, either randomly generated or systematically derived, to expose defects such as crashes, assertion failures, or memory-safety violations. Modern fuzzers prioritise inputs that increase code coverage (e.g., edge or block coverage), and couple execution with hardening oracles (e.g., sanitizers) to turn latent memory errors into reliable, actionable signals \cite{sutton2007fuzzing,miller1990fuzz}.
+
+\subsection{Types}
+A fuzzer can be classified along three ways \cite{sutton2007fuzzing,godefroid2008sage}:
+\begin{itemize}
+  \item \textbf{Input production:} \emph{generation-based} where inputs are produced from a model or specification and \emph{mutation-based} where inputs are produced by mutating existing seeds. Coverage-guided mutation fuzzers (e.g., \gls{aflpp}, libfuzzer) iteratively mutate seeds that increase coverage.
+  \item \textbf{Input knowledge:} \emph{structured}, grammar- or model-based, aware of input format/protocol, or \emph{unstructured}, no knowledge of structure; “dumb” or purely random.
+  \item \textbf{Program knowledge:} \emph{black-box}: no visibility into internals, \emph{grey-box}: lightweight instrumentation, e.g., edge coverage, and \emph{white-box}: constraint solving/symbolic execution to systematically steer execution, as in SAGE \cite{godefroid2008sage}.
+\end{itemize}
+
+\subsection{Uses}
+Fuzzing is primarily employed to discover security-relevant defects in safety- or security-critical software, especially memory-safety bugs in native code. Its strength lies in \emph{demonstrating the presence} of bugs via concrete, reproducible inputs. Proving correctness for all inputs requires a formal specification and formal methods; fuzzing complements, rather than replaces, such approaches \cite{sutton2007fuzzing}. In practice, fuzzing integrates into secure development lifecycles and CI pipelines to continuously test libraries, parsers, and interfaces that process untrusted data.
+
+\subsection{Android context (sanitizers as oracles).}
+On Android, fuzzing native components benefits from memory error detectors such as \gls{hwasan} and, historically, \gls{asan}. These sanitizers instrument code to detect out-of-bounds accesses, use-after-free, and related violations during fuzzing, producing precise diagnostics that accelerate crash triage \cite{hwasan-ndk,asan-aosp,asan-clang}.
+
+Two widely used coverage-guided engines are \gls{aflpp} (a fork and extension of AFL with a rich ecosystem of mutators and instrumentation options) and \gls{libfuzzer}. Both have been successfully applied to native libraries, including on Android, to elicit high-quality crashes and to maximise coverage under realistic budgets \cite{aflpp-woot20,libfuzzer-llvm}.
+
+
+
+
+
+
+\section{\glsxtrlong{llm}}
+\glspl{llm} are deep neural networks based on the Transformer architecture, which replaces recurrence/convolution with stacked self-attention and feed-forward layers to model long-range dependencies efficiently \cite{vaswani2017attention}. In practice, today’s \glspl{llm} are pre-trained on large corpora via next-token prediction and then adapted to follow user prompts. 
+
+\subsection{Limitations and Hallucinations}
+Because \glspl{llm} predict tokens rather than verify facts, they can generate confident but incorrect content (``hallucinations''). Surveys and recent studies document multiple forms (e.g., intrinsic or confabulated outputs) and show that even state-of-the-art models may produce fluent fabrications \cite{ji2023hallucination,farquhar2024semanticentropy}. In security-oriented workflows such as vulnerability triage, this can manifest as invented \gls{cve} identifiers, non-existent \glspl{api} or packages, fabricated proof-of-concept details, or misattributed stack traces, errors that can mislead severity assessment or waste analyst time. Empirical work on code-generation further highlights ``package hallucinations'', where models recommend non-existent libraries, creating supply-chain risk if an attacker later publishes a malicious package with that name \cite{spracklen2025package}. Consequently, any use of \glspl{llm} for triage should treat outputs as hypotheses to be checked against authoritative sources and artefacts (code, binaries, advisories), and prefer designs that promote verifiability and uncertainty signalling rather than unconditional trust.
+
+
+
+
+
+\section{\glsxtrlong{mcp}}
+\gls{mcp} is an open protocol, introduced by Anthropic (creator of Claude) in November 2024, that standardises how AI applications obtain and manage external context via a client–server architecture.
+An \emph{MCP host} (the AI application) connects to one or more \emph{MCP servers} through dedicated \emph{MCP clients}, enabling the host to discover and use tools, read resources, and apply prompts exposed by servers. The protocol separates a JSON-RPC–based \emph{data layer} (primitives, lifecycle, notifications) from a \emph{transport layer} (e.g., stdio for local, streamable HTTP for remote), so the same message semantics work across local and remote deployments \cite{mcp-architecture,mcp-intro}. In brief, servers contribute context and actions; clients manage capability negotiation and exchanges; the host orchestrates everything in the user-facing application \cite{mcp-architecture,mcp-server-concepts,mcp-client-concepts}. Figure~\ref{fig:mcp-simple-diagram} provides a high-level view of this host–client–server pattern and example integrations.
+
+\begin{figure}
+    \centering
+    \scalebox{0.8}{\input{tikzpicture/mcp-simple-diagram}}
+    \caption[High-level MCP architecture.]%
+      {High-level \gls{mcp} architecture. The \gls{mcp} host (e.g., chat interface or IDE) coordinates one or more \gls{mcp} clients, each connected to an \gls{mcp} server that exposes tools, resources, and prompts \cite{mcp-intro}.}
+    \label{fig:mcp-simple-diagram}
+\end{figure}
+
 
 
 \begin{comment}
-    \subsection{Vulnerabilities and Impact on the Android Sandbox}
-Memory-safety defects in native libraries—such as buffer overflows, out-of-bounds reads/writes, use-after-free, and double free—belong to well-known categories captured by \gls{cwe}, and they frequently appear in \gls{cve} records \cite{cwe-mitre,cve-overview}. On Android, these errors may manifest as application crashes, or in more severe cases permit arbitrary code execution or data tampering, depending on mitigations and exploitability assumptions \cite{android-native-risk}.  
+    \subsection{Core Concepts}
+\paragraph{Data layer and primitives.}
+The data layer defines message schemas and semantics (JSON-RPC 2.0) and the core \emph{primitives} that servers expose to clients: \emph{tools} (executable functions that the AI can call), \emph{resources} (read-only context like files, DB records, API responses), and \emph{prompts} (reusable instruction templates). Clients discover and retrieve these via `*/list` and `*/get`, and invoke tools with `tools/call`. Lifecycle management handles initialization and capability negotiation; notifications propagate dynamic changes such as tool-list updates \cite{mcp-architecture,mcp-server-concepts}.
 
-Because native code runs within the same process as managed Java/Kotlin code, a compromised native component can escalate local access to high-impact asset access. The Android sandbox enforces per-\gls{uid} isolation at the kernel level, reinforced by SELinux policies, thereby limiting the immediate blast radius to resources the app is permitted to access \cite{android-app-sandbox,android-selinux,apsm-mayrhofer-2023}. Nonetheless, real-world applications often bundle sensitive data (e.g. authentication tokens, stored user content, cryptographic keys) that fall precisely within those permissions, meaning native compromise can directly expose high-value artifacts.  
-
-In practice, attackers can chain native vulnerabilities with other flaws or system interfaces to amplify impact. For example, many Android system services are implemented in native C/C++ and expose Binder or RPC interfaces; memory corruption in such a service can be triggered via IPC by a malicious app to escalate privileges beyond app-level constraints \cite{mao-nass-usenix25}. In other scenarios, native code may corrupt memory pages shared with the managed runtime (e.g. altering JIT or class metadata) by transgressing memory protection via system calls (e.g. \texttt{mprotect}), thus undermining Java-level safety invariants and enabling code injection or VM subversion \cite{going-native-ndss17}. Another common vector is outdated third-party native libraries: empirical studies show that a significant fraction of popular apps ship unpatched vulnerable native libraries, and that developers take on average hundreds of days to apply upstream patches \cite{almanee-icse21}. This “patch latency” enables attackers to exploit known vulnerabilities even in apps that seem benign at the Java layer.  
-
-Further, native vulnerabilities may play a role in sandbox bypass when native–Java communication channels (e.g. JNI calls, shared memory, or custom bridging interfaces) are too permissive, enabling the attacker to pivot across boundaries. And, although less common, sophisticated combos of memory bugs and hardware or side-channel attacks (such as cache timing, fault injection, or speculative execution vulnerabilities) may escalate privileges beyond process boundaries or extract secrets not otherwise exposed \cite{munoz2024cracking}. To mitigate these risks, secure design and runtime hardening (e.g. ASLR, DEP, bounds sanitizers, control-flow integrity) are essential in containing exploitation even within a sandboxed environment.
-
-Memory-safety defects in native libraries—such as buffer overflows, out-of-bounds reads or writes, use-after-free, and double free—are widespread in C/C++ code and constitute classic weakness families in \gls{cwe} taxonomies. For example, buffer overflows occur when a program writes more data than a destination buffer can hold, thereby overwriting adjacent memory (heap or stack) in the process \cite{cwe-123,buffer-overflow-wiki}. Use-after-free (CWE-416) arises when memory is accessed after it has been freed, causing references to dangling pointers to lead to memory corruption or code execution \cite{cwe-416}. Double free (CWE-415) refers to freeing the same memory region twice, which may corrupt allocator metadata, lead to memory management inconsistencies, and enable exploitation such as write-what-where conditions \cite{cwe-415,owasp-doublefree}.  
-
-On Android, such defects may lead to denial-of-service (e.g. crash) or escalate to arbitrary code execution depending on available mitigations (ASLR, DEP, control-flow integrity) and the exploitability context \cite{android-native-risk,android-ndk-mte}. Because native code executes within the same process as the managed layer, a corrupted native component may corrupt or hijack data, control flow, or even the Java runtime itself, effectively breaking the isolation guaranteed by the managed environment.  
-
+\paragraph{Transport layer.}
+Transports carry the same data-layer messages. \emph{Stdio} provides low-latency local connections; \emph{streamable HTTP} enables remote servers with standard auth (API keys, bearer tokens, OAuth). Transport concerns (framing, auth) are kept orthogonal to the data schema \cite{mcp-architecture}.
 \end{comment}
 
-%\subsection{Security and diagnostics (brief)}
-%Because native code shares the app process, memory-safety bugs (e.g., buffer overflows, out-of-bounds access, use-after-free) can compromise integrity and confidentiality. During testing, enable sanitizers where feasible: \gls{asan} for detailed heap/stack diagnostics and \gls{hwasan} to catch temporal errors with lower overhead on ARMv8.5+ devices. These tools materially improve native defect detection during fuzzing and CI \cite{asan-aosp,hwasan-ndk}.
+\subsection{MCP Host}
+MCP Host is the AI application that coordinates and manages one or multiple \gls{mcp} clients. It maintains user experience, orchestrates connections to configured servers, and routes model/tool interactions \cite{mcp-architecture}.  
 
-\section{Fuzzing}
-\section{\glsxtrlong{llm}}
-\subsection{\glsxtrlong{mcp}}
-\section{Classification}
+On startup, the host instantiates one client per target server, runs initialization (protocol version and capabilities), caches discovered primitives, and enforces the app’s permission and UX policies when tools or elicitation are used \cite{mcp-architecture,mcp-client-concepts}.
+
+\subsection{MCP Client}
+MCP Client is a component that maintains a one-to-one connection to an \gls{mcp} server and obtains context for the host to use \cite{mcp-architecture}.  
+
+The client executes the data-layer protocol: initialization, discovery (`*/list`), retrieval (`*/get`), tool execution (`tools/call`), and handling notifications. Clients may also offer \emph{client primitives} to servers, \emph{sampling} (request an \gls{llm} completion via the host), \emph{elicitation} (ask the user for inputs/confirmation), and \emph{logging}, which enable richer, permissioned workflows without coupling servers to a specific model SDK \cite{mcp-client-concepts,mcp-architecture}.
+
+\subsection{MCP Server}
+MCP Server is a program that provides context to \glspl{mcp} client via standardised interfaces \cite{mcp-architecture}.  
+
+Servers expose \emph{tools}, \emph{resources}, and \emph{prompts} described with schemas (e.g., JSON Schema for tool inputs/outputs). Typical servers include filesystem, databases, code hosts, observability or messaging platforms. Server capabilities are declared during initialization, can change at runtime (with notifications), and are discoverable by clients \cite{mcp-server-concepts,mcp-architecture}.
+
+\subsection{Elicitation}
+Elicitation in \gls{mcp} allows a server to request the exact user inputs still required \emph{during} an ongoing operation. The server pauses a tool call, asks the \gls{mcp} client—subject to the host’s UX and permission policies—to gather typed, structured fields such as a missing identifier, a disambiguation choice, or consent, then resumes processing once the validated payload is returned. Requests are typically described with JSON Schema, are transport-agnostic, and support multi-turn workflows without coupling to any specific UI or model SDK. The host controls presentation and policy enforcement, and servers are expected to avoid sensitive data. In practice, elicitation reduces failures from incomplete inputs and turns uncertainty into explicit, auditable user decisions. \cite{mcp-architecture,mcp-elicitation}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\linewidth, trim={-3.5cm 0 3.5cm 0},clip]{figures/elicitation-flow.png}
+
+    \caption[Elicitation flow of MCP]%
+    {Elicitation flow of \gls{mcp} \cite{mcp-client-concepts}}
+    \label{fig:elicitation-flow}
+\end{figure}
+
+Figure~\ref{fig:elicitation-flow} shows the server-initiated sequence: the server issues \texttt{elicitation/create}, the host presents an interface, the user responds, the client completes the request, and the server continues with the new context. \cite{mcp-elicitation}
+
+
+\section{Vulnerability Scoring Systems}
+\subsection{\glsxtrlong{cvss}}
+\subsection{\glsxtrlong{cwe}}
+\subsection{\glsxtrlong{cve}}
+
+
+\section{Reverse engineering}
+\subsection{Ghidra}
+\subsection{Jadx}
+
+
+\begin{comment}
+
 
 \section{Memory safety differences and vulnerability classes}
 Java/Kotlin provide memory safety by construction (bounds checks, GC), whereas C/C++ delegate memory and lifetime management to the programmer, enabling classes of bugs that frequently underlie security vulnerabilities. Common weakness families include buffer overflow/underflow, use-after-free, out-of-bounds read/write, and double free; these are captured in \gls{cwe} and repeatedly observed in \gls{cve} records \cite{cwe-mitre,cve-overview}. On Android, such defects can lead to denial of service (crash) or arbitrary code execution, depending on mitigations and exploitability \cite{android-native-risk}.
 
 
 
-\section{Fuzzing native libraries and harness generation}
+\subsection{Fuzzing native libraries and harness generation}
 Coverage-guided fuzzing mutates inputs to maximise code coverage while detecting crashes via sanitizers or OS signals. \gls{aflpp} generalises AFL’s greybox approach and incorporates state-of-the-art features (e.g., custom mutators) for broad applicability \cite{aflpp-woot20}. \gls{libfuzzer} integrates tightly with LLVM sanitizers and is widely used for in-process targets \cite{libfuzzer-llvm}. Sanitizers such as \gls{asan} and \gls{hwasan} are available on Android and provide precise diagnostics for memory-safety violations \cite{asan-android-aosp,hwasan-ndk}.
 
 The limiting factor for library fuzzing is the harness: an executable environment that exercises target \glspl{api} with realistic sequences and well-formed objects. Automating harness synthesis for Android native libraries is challenging due to cross-language interactions, complex object lifecycles, and the need to emulate app-specific call sequences via \gls{jni}. POIROT addresses these challenges by statically analysing an app’s Java-side usage of the native library, synthesising a consumer-specific harness that supports bidirectional \gls{jni}, and running large-scale fuzzing campaigns \cite{poirot-usenix25}. Prior works on harness generation and Android library fuzzing (e.g., ATLAS, FuzzGen) highlight the broader landscape and the difficulty of scaling without app-specific context \cite{atlas-issta24,fuzzgen-usenix20}.
 
-\section{Crash triage: principles and challenges}
+\subsection{Crash triage: principles and challenges}
 Crash triage seeks to (i) deduplicate and bucket crashes, (ii) decide whether a crash indicates a security-relevant vulnerability, and (iii) prioritise fixes. Heuristic exploitability assessors and semantic crash bucketing methods have been proposed to improve accuracy and scalability, yet they typically assume desktop/server contexts and still require expert review \cite{scb-ase18,igor-ccs21}. On Android, crashes often originate in native code called through \gls{jni} and may depend on app-specific object invariants; reproducing and interpreting them benefits from reverse-engineering and sanitizer evidence \cite{poirot-usenix25,asan-android-aosp}.
 
 \section{\gls{llm}s with tool grounding for security triage}
@@ -124,3 +207,6 @@ To communicate results and integrate with established workflows, crash judgement
 
 \section*{Provisional references for the Background}
 Android app model and \gls{jni} \cite{art-doc,ndk-guide,jni-book,jni-tips}; memory-safety risks \cite{android-native-risk,cwe-mitre,cve-overview}; fuzzing and sanitizers \cite{aflpp-woot20,libfuzzer-llvm,asan-android-aosp,hwasan-ndk}; POIROT and harness generation landscape \cite{poirot-usenix25,atlas-issta24,fuzzgen-usenix20}; crash bucketing/triage \cite{scb-ase18,igor-ccs21}; tool grounding and supporting tools \cite{mcp-overview,jadx-github,ghidra-github}; severity/taxonomies \cite{cvss31,cvss40}.
+
+    
+\end{comment}

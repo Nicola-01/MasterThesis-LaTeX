@@ -1,0 +1,60 @@
+\begin{tikzpicture}[font=\small, node distance=5mm and 16mm]
+
+% --- Stili per i box principali ---
+\tikzset{
+  groupbox/.style={inner sep=0pt},
+  grouplabel/.style={font=\footnotesize\bfseries, fill=white, inner sep=1pt}
+}
+
+\def\WNode{45mm}
+\def\HNode{25mm}
+\def\NDistanceH{10mm}
+\def\NDistanceV{2mm}
+
+% =============== BLOCCO SINISTRA (SX): 3 elementi ===============
+\node[layer, minimum width=\WNode] (L1) {\textbf{Chat interface}\\Claude Desktop};
+\node[layer, minimum width=\WNode, below=\NDistanceV of L1] (L2) {\textbf{IDEs and code editors}\\Claude Code, Goose};
+\node[layer, minimum width=\WNode, below=\NDistanceV of L2] (L3) {\textbf{Other AI applications}\\5ire, Superinterface};
+% Box che "abbraccia" i tre nodi: il suo centro è a metà verticale
+\node[groupbox, fit=(L1) (L3), label={[grouplabel, label distance=\NDistanceV]south:\gls{mcp} hosts}] (SXBOX) {};
+
+% =============== BLOCCO CENTRALE (CENTRO): 1 elemento ===========
+% Posizionato "right=..." RISPETTO A SXBOX (non L1): così condivide la stessa y del centro
+\node[layer, fill=cHAL!60, minimum width=\WNode, minimum height=\HNode, right=\NDistanceH of SXBOX] (C1)
+  {\textbf{MCP}\\Standardized protocol};
+\node[groupbox, fit=(C1)] (CTBOX) {};
+
+% =============== BLOCCO DESTRA (DX): 3 elementi =================
+% Posiziona il blocco destro a destra del nodo centrale (che è ora centrato verticalmente)
+\node[layer, minimum width=\WNode, right={\NDistanceH*2+\WNode} of L1] (R1) {\textbf{Data and file systems}\\PostgreSQL, SQLite, GDrive};
+\node[layer, minimum width=\WNode, below=\NDistanceV of R1] (R2) {\textbf{Development tools}\\Git, Sentry, etc.};
+\node[layer, minimum width=\WNode, below=\NDistanceV of R2] (R3) {\textbf{Productivity tools}\\Slack, Google Maps, etc.};
+\node[groupbox, fit=(R1) (R3), label={[grouplabel, label distance=\NDistanceV]south:\gls{mcp} clients}] (DXBOX) {};
+
+% --- Stile frecce ---
+\tikzset{
+  bidi/.style={
+    draw=black!35,
+    line width=0.5pt,
+    rounded corners=2mm,
+    {Latex[length=2mm]}-{Latex[length=2mm]}
+  },
+}
+
+
+\def\ADistanceH{\NDistanceH*0.5}
+\def\ADistanceV{6mm}
+
+\draw[bidi] (L1.east) -|  ([shift=({-\ADistanceH, \ADistanceV})]C1.west) -- ([yshift={\ADistanceV}]C1.west);
+\draw[bidi] (L2.east) -- (C1.west);
+\draw[bidi] (L3.east) -|  ([shift=({-\ADistanceH, -\ADistanceV})]C1.west) -- ([yshift={-\ADistanceV}]C1.west);
+
+
+\draw[bidi] ([yshift={\ADistanceV}]C1.east) --  ([shift=({\ADistanceH, \ADistanceV})]C1.east) |- (R1.west);
+\draw[bidi] (C1.east) -- (R2.west);
+\draw[bidi] ([yshift={-\ADistanceV}]C1.east) --  ([shift=({\ADistanceH, -\ADistanceV})]C1.east) |- (R3.west);
+
+
+
+
+\end{tikzpicture}

@@ -116,7 +116,6 @@
 %\usepackage[table,xcdraw]{xcolor}
 \usepackage{xcolor}
 \usepackage{tikz}
-\usetikzlibrary{positioning} 
 \usepackage{pgfplots}
 \pgfplotsset{compat=newest} 
 \pgfplotsset{plot coordinates/math parser=false} 
@@ -127,6 +126,7 @@
 %\usepackage{multicolumn}
 \usepackage{subcaption}
 \usetikzlibrary{patterns,decorations.pathreplacing,backgrounds,calc}
+\usetikzlibrary{positioning,fit,arrows.meta,calc}
 \usepackage{afterpage}
 \usepackage{tabulary}
 \newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
@@ -493,5 +493,7 @@
   }
 }
 
+
+% \usepackage{svg}
 \usepackage{caption}
 \captionsetup{justification=centering, singlelinecheck=false}

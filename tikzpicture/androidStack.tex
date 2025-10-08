@@ -1,0 +1,22 @@
+\begin{tikzpicture}
+
+    \tikzset{
+        groupbox/.style={inner sep=0pt}
+    }
+
+    \def\W{8cm}
+    \def\Wleft{4.45cm}
+    \def\Wright{3.45cm}
+    \def\Distance{0.8mm}
+    
+    \node[layer, fill=cSystem!60, minimum width=\W] (apps) {System Apps};
+    \node[layer, fill=cJava!60, minimum width=\W, below=\Distance of apps] (java) {Java API Framework};
+    
+    \node[layer, fill=cNative!60, minimum width=\Wleft, below=\Distance of java, anchor=west] (native) at ($(java.south west)+(0,-3.5mm)$) {Native C/C++ Libraries};
+    \node[layer, fill=cRuntime!70, minimum width=\Wright, below=\Distance of java, anchor=east] (runtime) at ($(java.south east)+(0,-3.5mm)$) {Android Runtime};
+    
+    \node[groupbox, fit=(native) (runtime)] (BOX) {};
+    
+    \node[layer, fill=cHAL!60, minimum width=\W, below=\Distance of BOX] (hal) {Hardware Abstraction Layer (HAL)};
+    \node[layer, fill=cKernel!60, minimum width=\W, below=\Distance of hal] (kernel) {Linux Kernel};
+\end{tikzpicture}

@@ -1,7 +1,8 @@
 \chapter{Related Work}
 \label{chp:relatedWork}
 
-
+\begin{comment}
+    
 \section{Fuzzing of Android native libraries and harness generation}
 Fuzzing of Android native libraries poses challenges beyond conventional user-space fuzzing due to the \gls{jni} boundary, lifecycle constraints, and the need for realistic cross-language call sequences. POIROT automatically synthesises consumer-specific harnesses for closed-source Android libraries by analysing Java-side usage and supporting bidirectional \gls{jni} interactions, enabling large-scale campaigns that uncovered thousands of unique crashes \cite{poirot-usenix25}. Atlas similarly targets Android closed-source native libraries with a cross-language fuzzing framework and automatic harness generation \cite{atlas-issta24}. Beyond the Android setting, FuzzGen synthesises library-specific fuzzers by inferring API contracts and integrating with \gls{libfuzzer} to reach deep states \cite{fuzzgen-usenix20}. Prior engineering work shows that reproducing \gls{art} behaviour and \gls{jni} semantics is critical for validity and reproducibility of results \cite{polito-android-native-fuzzing}. As to fuzzing engines, \gls{aflpp} extends greybox fuzzing with a rich ecosystem of mutators and instrumentation \cite{aflpp-woot20}, while \gls{libfuzzer} offers tight integration with LLVM sanitizers for in-process fuzzing \cite{libfuzzer-llvm}. Sanitizers such as \gls{asan} and \gls{hwasan} are widely used to diagnose memory-safety defects during fuzzing on Android \cite{asan-android-aosp,hwasan-ndk}.
 
@@ -13,3 +14,5 @@ Tool grounding aims to reduce hallucinations and improve faithfulness by letting
 
 \section{Positioning}
 Compared to POIROT and Atlas, which focus on automating harness generation and fuzzing at scale \cite{poirot-usenix25,atlas-issta24}, our work targets the \emph{post-fuzzing} triage stage for Android native crashes. Relative to CASEY/LProtector and survey results on \gls{llm}-for-security \cite{casey-aic25,lprotector-2024,acl25-llm-benchmark-slr,slr-llm-vuln-2025}, our contribution is a tool-grounded pipeline that couples \gls{mcp}-mediated access to Jadx/Ghidra with crash artefacts from POIROT, aiming to improve precision, explainability, and analyst verification for \gls{jni}-mediated memory-safety issues.
+
+\end{comment}
