@@ -2,3 +2,33 @@
 \label{chp:preliminaries}
 
 \section{POIROT}
+\subsection{Goal and setting.}
+\emph{POIROT} targets commercial Android applications that embed native C/C++ libraries invoked through the \gls{jni}. Its goal is to discover security-relevant defects by \emph{automatically} building a realistic, consumer-specific fuzzing harness that mirrors how the app actually exercises its native library, and then running coverage-guided fuzzing at scale \cite{poirot-usenix25}.
+
+\subsection{Key idea.}
+Instead of relying on generic, library-centric drivers, POIROT recovers the \emph{app’s} usage of the library from Dalvik bytecode and synthesises a harness that supports \emph{bidirectional} \gls{jni} interactions. The harness initialises app-relevant state, invokes native entry points following app-specific call sequences, and preserves argument/value constraints discovered in the managed code, thereby increasing the likelihood of reaching security-critical behaviours during fuzzing \cite{poirot-usenix25}.
+
+\subsection{Inputs and outputs.}
+Given an APK and its embedded native libraries, POIROT:
+\begin{enumerate}
+  \item analyses \gls{dex} to extract \emph{consumer usage}: call sites to native methods, inter-procedural call sequences, and salient argument/value flows across the \gls{jni} boundary;
+  \item synthesises a consumer-specific harness that loads the target library and replays realistic \gls{jni} interactions;
+  \item executes a coverage-guided fuzzing campaign on Android virtual devices and records crashes.
+\end{enumerate}
+For each crash, POIROT emits artefacts used later by our triager:
+\begin{itemize}
+  \item \textbf{Crash report:} signal or sanitizer class, faulting address/PC, and (where available) backtrace;
+  \item \textbf{Reproducer:} the crashing input (seed) suitable for deterministic replay;
+  \item \textbf{Harness metadata:} target native function, app-specific call sequence, and inferred argument constraints;
+  \item \textbf{Fuzzing metadata:} iterations/coverage counters from the underlying engine.
+\end{itemize}
+POIROT operates without access to native source code and does not require manual harness engineering \cite{poirot-usenix25}.
+
+\subsection{Scale of evaluation (for context).}
+In its evaluation, POIROT analysed the 3{,}967 most popular Android apps that bundle native libraries, reporting 4{,}282 \emph{unique} crashes affecting 934 apps; multiple issues were confirmed as vulnerabilities \cite{poirot-usenix25}. We refer to this corpus as the canonical benchmark when discussing expected crash profiles and artefact structure.
+
+\subsection{Assumptions and limitations.}
+POIROT’s harnesses are derived from static analysis of managed code and may miss hidden initialisation or implicit invariants; this can lead to infeasible call sequences or under-approximation of constraints. Some crashes depend on environment-specific state or non-determinism and may not be fully reproducible outside POIROT’s testbed. Finally, obfuscation, stripped symbols, and complex reflection patterns can reduce the fidelity of usage recovery; our triager explicitly surfaces such uncertainty when assigning confidence.
+
+\subsection{Interface used in this thesis.}
+We treat POIROT as an oracle that provides: (i) crash reports, (ii) reproducers, and (iii) harness/usage metadata. These artefacts are consumed by our tool-grounded \gls{llm} triager in later chapters; no modifications to POIROT are required on our side.
