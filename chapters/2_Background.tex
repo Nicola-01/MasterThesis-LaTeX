@@ -120,8 +120,8 @@ Because \glspl{llm} predict tokens rather than verify facts, they can generate c
 
 
 \section{\glsxtrlong{mcp}}
-\gls{mcp} is an open protocol, introduced by Anthropic (creator of Claude) in November 2024, that standardises how AI applications obtain and manage external context via a client–server architecture.
-An \emph{MCP host} (the AI application) connects to one or more \emph{MCP servers} through dedicated \emph{MCP clients}, enabling the host to discover and use tools, read resources, and apply prompts exposed by servers. The protocol separates a JSON-RPC–based \emph{data layer} (primitives, lifecycle, notifications) from a \emph{transport layer} (e.g., stdio for local, streamable HTTP for remote), so the same message semantics work across local and remote deployments \cite{mcp-architecture,mcp-intro}. In brief, servers contribute context and actions; clients manage capability negotiation and exchanges; the host orchestrates everything in the user-facing application \cite{mcp-architecture,mcp-server-concepts,mcp-client-concepts}. Figure~\ref{fig:mcp-simple-diagram} provides a high-level view of this host–client–server pattern and example integrations.
+\gls{mcp} is an open protocol, introduced by Anthropic (creator of Claude) in November 2024, that standardises how \gls{ai} applications obtain and manage external context via a client–server architecture.
+An \emph{MCP host} (the \gls{ai} application) connects to one or more \emph{MCP servers} through dedicated \emph{MCP clients}, enabling the host to discover and use tools, read resources, and apply prompts exposed by servers. The protocol separates a JSON-RPC–based \emph{data layer} (primitives, lifecycle, notifications) from a \emph{transport layer} (e.g., stdio for local, streamable HTTP for remote), so the same message semantics work across local and remote deployments \cite{mcp-architecture,mcp-intro}. In brief, servers contribute context and actions; clients manage capability negotiation and exchanges; the host orchestrates everything in the user-facing application \cite{mcp-architecture,mcp-server-concepts,mcp-client-concepts}. Figure~\ref{fig:mcp-simple-diagram} provides a high-level view of this host–client–server pattern and example integrations.
 
 \begin{figure}
     \centering
@@ -136,14 +136,14 @@ An \emph{MCP host} (the AI application) connects to one or more \emph{MCP server
 \begin{comment}
     \subsection{Core Concepts}
 \paragraph{Data layer and primitives.}
-The data layer defines message schemas and semantics (JSON-RPC 2.0) and the core \emph{primitives} that servers expose to clients: \emph{tools} (executable functions that the AI can call), \emph{resources} (read-only context like files, DB records, API responses), and \emph{prompts} (reusable instruction templates). Clients discover and retrieve these via `*/list` and `*/get`, and invoke tools with `tools/call`. Lifecycle management handles initialization and capability negotiation; notifications propagate dynamic changes such as tool-list updates \cite{mcp-architecture,mcp-server-concepts}.
+The data layer defines message schemas and semantics (JSON-RPC 2.0) and the core \emph{primitives} that servers expose to clients: \emph{tools} (executable functions that the \gls{ai} can call), \emph{resources} (read-only context like files, DB records, API responses), and \emph{prompts} (reusable instruction templates). Clients discover and retrieve these via `*/list` and `*/get`, and invoke tools with `tools/call`. Lifecycle management handles initialization and capability negotiation; notifications propagate dynamic changes such as tool-list updates \cite{mcp-architecture,mcp-server-concepts}.
 
 \paragraph{Transport layer.}
 Transports carry the same data-layer messages. \emph{Stdio} provides low-latency local connections; \emph{streamable HTTP} enables remote servers with standard auth (API keys, bearer tokens, OAuth). Transport concerns (framing, auth) are kept orthogonal to the data schema \cite{mcp-architecture}.
 \end{comment}
 
 \subsection{MCP Host}
-MCP Host is the AI application that coordinates and manages one or multiple \gls{mcp} clients. It maintains user experience, orchestrates connections to configured servers, and routes model/tool interactions \cite{mcp-architecture}.  
+MCP Host is the \gls{ai} application that coordinates and manages one or multiple \gls{mcp} clients. It maintains user experience, orchestrates connections to configured servers, and routes model/tool interactions \cite{mcp-architecture}.  
 
 On startup, the host instantiates one client per target server, runs initialization (protocol version and capabilities), caches discovered primitives, and enforces the app’s permission and UX policies when tools or elicitation are used \cite{mcp-architecture,mcp-client-concepts}.
 
