@@ -496,4 +496,5 @@
 
 % \usepackage{svg}
 \usepackage{caption}
+\usepackage{pgf-umlsd}
 \captionsetup{justification=centering, singlelinecheck=false}

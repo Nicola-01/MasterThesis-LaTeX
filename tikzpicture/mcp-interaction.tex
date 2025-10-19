@@ -1,0 +1,29 @@
+  \begin{sequencediagram}
+    % Participants
+    \newinst[0]{U}{User}{}
+    \newinst[1]{L}{LLM}{}
+    \newinst[1]{C}{MCP Client}{}
+    \newinst[1]{S}{MCP Server}{}
+
+    % --- Capability discovery (top half) ---
+    \begin{sdblock}{Initialization}{}
+        \begin{call}{C}{List Tools Request}{S}{List of Tools}
+        \end{call}
+    
+        \begin{mess}{C}{List of Tools}{L}
+        \end{mess}
+    \end{sdblock}
+
+
+    % --- User interaction and tool invocation (bottom half) ---
+    \begin{sdblock}{Invocation}{}
+        \begin{call}{U}{User prompt}{L}{Reply to User}
+            \begin{call}{L}{Tool Selection}{C}{Tool Response}
+                \begin{call}{C}{Tool Call}{S}{Tool Response}
+                    
+                \end{call}
+            \end{call}
+        \end{call}
+    \end{sdblock}
+
+  \end{sequencediagram}
