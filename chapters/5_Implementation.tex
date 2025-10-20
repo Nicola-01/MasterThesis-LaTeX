@@ -1,7 +1,55 @@
 \chapter{Implementation}
 \label{chp:impl}
 
+The triage system is implemented in Python~3 and orchestrates a tool-grounded \gls{llm} over crashes discovered by the fuzzing pipeline (see \emph{Preliminaries}). Conceptually, the program:\\
+(i) ingests POIROT output (i.e. stack traces).\\
+(ii) enriches them with reverse-engineering context via the \gls{mcp} (Jadx for bytecode/manifest, Ghidra for native disassembly/decompilation).\\
+(iii) produces a structured judgement comprising a vulnerability likelihood, a succinct rationale anchored to concrete evidence (frames, symbols, code hunks), and a severity estimate. 
+
+The implementation emphasises strict data modelling, explicit tool adaptors, and prompt templates specialised for each tool, so that the resulting traces are reproducible and auditable.
+
+\textcolor{red}{Da rivedere quando il capitolo è finito}
+
+
+\section{Libraries and Dependencies}
+The codebase relies on a small set of focused Python libraries and external tools:
+\begin{itemize}
+  \item \texttt{pydantic} (v2.12.3) for strict, typed data models (e.g., crash summaries and tool responses) and runtime validation. This allows us to require that the \gls{llm} return an instance conforming to a predefined model, so the output can be parsed deterministically (without ad-hoc prompt parsing) and serialised/deserialised as JSON with minimal glue code.
+  \item \texttt{pydantic\_ai} for agent composition and the \emph{\gls{mcp}} client; specifically, the \texttt{MCPServerStdio} transport is used to connect to tool servers over stdio.
+  %\item \textbf{LLM providers.} The agent is provider-agnostic and supports OpenAI/Google backends; a local wrapper (\texttt{ollamaLocal.py}) is included for offline experiments.
+  %\item \textbf{External tools (via MCP).} Jadx and Ghidra are accessed through dedicated \gls{mcp} adaptors; prompts and post-processing live under \texttt{MCPs/} (see below).
+\end{itemize}
+All configuration (model choice, tool endpoints, timeouts) is read at start-up; failures in any tool adaptor fail fast with descriptive error messages and are surfaced in the final report.
+
+\section{Program Structure}
+Figure~\ref{fig:program-structure} summarises the modules and the directory layout used during development.
+
+\paragraph{Entry point and orchestration.}
+\texttt{main.py} parses inputs (paths to POIROT outputs, model/tool configuration), instantiates the analysis \emph{agent} via \texttt{MCPs/get\_agent.py}, and coordinates the end-to-end run: load crash artefacts $\rightarrow$ enrich with tool context $\rightarrow$ run triage $\rightarrow$ emit a structured report.
+
+\paragraph{Data model and utilities.}
+\texttt{CrashSummary.py} defines the canonical in-memory representation for a crash (stack frames, symbol/offset, JNI entry point, reproducer, harness sequence, metadata). \texttt{utils.py} centralises I/O (filesystem paths, JSON/NDJSON log handling) and small helpers (e.g., normalising symbol names, safer subprocess calls). \texttt{jadx\_helper\_functions.py} offers convenience wrappers for common Jadx queries (e.g., resolve a method signature, fetch call sites, extract a minimal decompiled hunk).
+
+\paragraph{Agent and MCP adaptors.}
+\texttt{MCPs/get\_agent.py} composes the triage agent with the required tool capabilities and the selected \gls{llm} provider. \texttt{MCPs/jadxMCP.py} and \texttt{MCPs/ghidraMCP.py} implement thin clients over \texttt{MCPServerStdio}, handling request/response schemas, error propagation, and small post-processing (e.g., trimming code hunks and attaching file/offset provenance). \texttt{MCPs/ollamaLocal.py} is an optional backend to run models locally. \texttt{MCPs/vulnAssessment.py} aggregates model/tool outputs into the final, typed judgement (likelihood, confidence, CWE/notes, severity).
+
+\paragraph{Prompt specialisation.}
+Under \texttt{MCPs/prompts/}, \texttt{ghidra\_prompts.py} and \texttt{jadx\_prompts.py} hold tool-specific instructions for evidence retrieval (symbol lookup, minimal hunk extraction, JNI boundary cues). \texttt{vulnAssesment\_prompts.py} encodes the triage schema and the evidence-anchoring style used to elicit precise, verifiable rationales from the \gls{llm}.
+
+\paragraph{Evaluation harness.}
+\texttt{evaluation.py} loads saved judgements and computes summary statistics or exports artefacts for manual review; it is deliberately decoupled from the online agent to support offline auditing and ablations.
+
+
+
+\begin{figure}
+    \centering
+    \scalebox{0.8}{\input{tikzpicture/program-structure}}
+    \caption{Program Structure}
+    \label{fig:program-structure}
+\end{figure}
+
 \section{LLM and MCP integration}
+
 
 \subsection{Agent setup}
 \subsubsection{Gemini}

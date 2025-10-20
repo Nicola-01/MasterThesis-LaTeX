@@ -497,4 +497,32 @@
 % \usepackage{svg}
 \usepackage{caption}
 \usepackage{pgf-umlsd}
+%\usepackage{forest}
 \captionsetup{justification=centering, singlelinecheck=false}
+
+\usepackage[edges]{forest}
+
+%\definecolor{foldercolor}{RGB}{124,166,198}
+\definecolor{foldercolor}{gray}{0.8}
+
+\tikzset{pics/folder/.style={code={%
+    \node[inner sep=0pt, minimum size=#1, xshift=6.5pt] (-foldericon) {};
+    \node[folder style, inner sep=0pt, minimum width=0.45*#1, minimum height=0.6*#1, above right, xshift=0.05*#1, yshift=-0.85] at (-foldericon.west) {};
+    \node[folder style, inner sep=0pt, minimum width=#1, minimum height=0.75*#1] at (-foldericon.center) {};
+}}, 
+pics/folder/.default={20pt}, % Larghezza di default per la cartella
+folder style/.style={draw=foldercolor!80!black, top color=foldercolor!40, bottom color=foldercolor} % Stile della cartella
+}
+
+\forestset{is file/.style={edge path'/.expanded={%
+        ([xshift=\forestregister{folder indent}]!u.parent anchor) |- (.child anchor)},
+        inner sep=0.7pt},
+    is root/.style={edge path'/.expanded={%
+        ([xshift=100*\forestregister{folder indent}]!u.parent anchor) |- (.child anchor)},
+        inner sep=0.7pt},
+    this folder size/.style={edge path'/.expanded={%
+        ([xshift=\forestregister{folder indent}]!u.parent anchor) |- (.child anchor) pic[solid]{folder=#1}}, inner xsep=1.3*#1},
+    folder tree indent/.style={before computing xy={l=#1}},
+    folder icons/.style={folder, this folder size=#1, folder tree indent=3*#1},
+    folder icons/.default={10pt},
+}
