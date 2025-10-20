@@ -49,7 +49,7 @@ Under \texttt{MCPs/prompts/}, \texttt{ghidra\_prompts.py} and \texttt{jadx\_prom
 \end{figure}
 
 \section{LLM and MCP integration}
-
+\textcolor{red}{TO add introfuction}
 
 \subsection{Agent setup}
 The system is provider-agnostic and selects the backend by model name. At start-up, the agent is instantiated with \texttt{pydantic\_ai.Agent}, a target \emph{output type} (a \texttt{pydantic} model), and a list of \gls{mcp} toolsets (\texttt{MCPServerStdio}). If no model is specified, the code falls back to the \texttt{LLM\_MODEL\_NAME} environment variable (default: \texttt{gemini-2.5-flash}) and constructs a Google Gemini backend; alternatively, a local backend can be created via Ollama. The agent wiring and defaults are implemented in \texttt{MCPs/get\_agent.py} and \texttt{MCPs/ollamaLocal.py}.
