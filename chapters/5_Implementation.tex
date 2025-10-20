@@ -52,8 +52,18 @@ Under \texttt{MCPs/prompts/}, \texttt{ghidra\_prompts.py} and \texttt{jadx\_prom
 
 
 \subsection{Agent setup}
-\subsubsection{Gemini}
-\subsubsection{Local LLM (Ollama)}
+The system is provider-agnostic and selects the backend by model name. At start-up, the agent is instantiated with \texttt{pydantic\_ai.Agent}, a target \emph{output type} (a \texttt{pydantic} model), and a list of \gls{mcp} toolsets (\texttt{MCPServerStdio}). If no model is specified, the code falls back to the \texttt{LLM\_MODEL\_NAME} environment variable (default: \texttt{gemini-2.5-flash}) and constructs a Google Gemini backend; alternatively, a local backend can be created via Ollama. The agent wiring and defaults are implemented in \texttt{MCPs/get\_agent.py} and \texttt{MCPs/ollamaLocal.py}.
+
+\paragraph{OpenAI}
+The architecture permits adding OpenAI GPT models by swapping in an OpenAI-compatible model/provider within the same \texttt{pydantic\_ai.Agent} construction. Although not enabled in the current \texttt{get\_agent.py}, the same pattern used for Gemini and Ollama applies (model selection by name, identical toolset attachment, and the same typed \texttt{output\_type}).
+
+\paragraph{Gemini}
+By default, \texttt{get\_agent.py} builds a Google Gemini backend using \texttt{GoogleModel} and \texttt{GoogleProvider}, sourcing the API key from \texttt{LLM\_API\_KEY}. The default model is \texttt{gemini-2.5-flash} unless overridden by the \texttt{model\_name} parameter or \texttt{LLM\_MODEL\_NAME}. The resulting \texttt{Agent} receives the \emph{system prompt}, the strict \texttt{output\_type} (our \texttt{pydantic} schema), and the list of \gls{mcp} toolsets, enabling tool-grounded reasoning with typed outputs.
+
+\paragraph{Local LLM (Ollama)}
+For offline or on-premise execution, \texttt{ollamaLocal.py} configures a local backend by pairing \texttt{OpenAIChatModel} with \texttt{OllamaProvider} (default base URL \texttt{http://localhost:11434/v1}) and an Ollama model name (e.g., \texttt{qwen3:8b}). The agent interface remains identical (same \texttt{system\_prompt}, \texttt{output\_type}, and \gls{mcp} toolsets). At start-up, a pre-flight check can verify that the requested model is available (e.g., via \texttt{ollama list}); if missing, the program should surface a clear error and guidance to pull the model.
+
+
 \subsection{MCP setup}
 \subsubsection{Jadx}
 \subsubsection{Ghidra}
