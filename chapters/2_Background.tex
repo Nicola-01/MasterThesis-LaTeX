@@ -10,7 +10,7 @@ Beyond the platform itself, developers can extend Android apps with their own na
 
 The advantages of native development stem from the ability to execute compiled machine code directly on the target CPU, allowing finer-grained optimisation and efficient memory use, important for resource-constrained mobile devices. It also enables hardware acceleration and access to specialised APIs (e.g., GPU, DSP, or sensor interfaces), making it indispensable in areas like augmented or virtual reality, game engines (e.g., Unity, Unreal), and device-specific system utilities. \textcolor{red}{Dovrei cercare una citazione}
 
-However, using native code extends the scope of Android applications beyond the safety of the managed runtime. Developers must explicitly handle memory allocation and deallocation, thread synchronisation, and exception propagation, as these are not automatically managed by the \gls{art}. Cross-ABI compatibility, debugging complexity, and maintenance across Android versions further increase the development burden. Consequently, the \gls{ndk} is recommended only when its benefits outweigh these costs \cite{android-ndk-getting-started,android-ndk-concepts,jni-tips}.
+However, using native code extends the scope of Android applications beyond the safety of the managed runtime. Developers must explicitly handle memory allocation and deallocation, thread synchronisation, and exception propagation, as these are not automatically managed by the \gls{art}. Cross-ABI compatibility, debugging complexity, and maintenance across Android versions further increase the development load. Consequently, the \gls{ndk} is recommended only when its benefits outweigh these costs \cite{android-ndk-getting-started,android-ndk-concepts,jni-tips}.
 
 This capability of use native code, extends the reach of Android apps beyond the managed runtime but also introduces explicit responsibilities for developers. Native code must handle its own memory management, threading and exception handling. This is significantly different from pure Java/Kotlin development.
 
@@ -183,7 +183,9 @@ In triage and remediation workflows, \gls{cve} entries identify concrete vulnera
 Reverse engineering in software is the analysis of binaries or bytecode to recover design and implementation information-disassembly, control/data flows, and higher-level structure, when source or specifications are incomplete or unavailable \cite{springer-sre-overview,samuelson1990re}. In practice, reverse engineering workflows combine a disassembler/decompiler with cross-reference search, symbol inspection, and targeted decompilation to produce evidence suitable for auditing and triage.
 
 \subsection{Ghidra}
-Ghidra is an open-source software reverse-engineering framework developed by the NSA. It provides disassembly, decompilation, graphing, and scripting across multiple architectures, and is widely used in vulnerability research and malware analysis \cite{ghidra-github}. In the pipeline, Ghidra is used for Android native libraries packaged as ELF shared objects (\texttt{.so}) inside APKs (e.g., \texttt{lib/arm64-v8a/*.so}), extracting functions, cross-references, and decompiled snippets to triage \gls{jni}-mediated crashes.
+Ghidra is an open-source software reverse-engineering framework developed by the NSA. It provides disassembly, decompilation, graphing, and scripting across multiple architectures, and is widely used in vulnerability research and malware analysis \cite{ghidra-github}. 
+
+In the pipeline, Ghidra is used for Android native libraries packaged as ELF shared objects (\texttt{.so}) inside APKs (e.g., \texttt{lib/arm64-v8a/*.so}), extracting functions, cross-references, and decompiled snippets to triage \gls{jni}-mediated crashes.
 
 \subsubsection{MCP integration: \texttt{pyghidra-mcp}.}
 \textcolor{red}{Non so se l'introduzione a questo mcp specifico sia più da implmentation che da backgroud}
