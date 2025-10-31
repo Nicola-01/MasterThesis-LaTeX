@@ -8,11 +8,11 @@ At the system level, Android’s C standard library and dynamic linker are provi
 
 Beyond the platform itself, developers can extend Android apps with their own native code through the \gls{ndk}.
 
-The advantages of native development stem from the ability to execute compiled machine code directly on the target CPU, allowing finer-grained optimisation and efficient memory use, important for resource-constrained mobile devices. It also enables hardware acceleration and access to specialised APIs (e.g., GPU, DSP, or sensor interfaces), making it indispensable in areas like augmented or virtual reality, game engines (e.g., Unity, Unreal), and device-specific system utilities. \textcolor{red}{Dovrei cercare una citazione}
+The advantages of native development stem from the ability to execute compiled machine code directly on the target CPU, allowing finer-grained optimisation and efficient memory use, important for resource-constrained mobile devices. It also enables hardware acceleration and access to specialised \glspl{api} (e.g., GPU, DSP, or sensor interfaces), making it indispensable in areas like augmented or virtual reality, game engines (e.g., Unity, Unreal), and device-specific system utilities.% \textcolor{red}{Dovrei cercare una citazione}
 
 However, using native code extends the scope of Android applications beyond the safety of the managed runtime. Developers must explicitly handle memory allocation and deallocation, thread synchronisation, and exception propagation, as these are not automatically managed by the \gls{art}. Cross-ABI compatibility, debugging complexity, and maintenance across Android versions further increase the development load. Consequently, the \gls{ndk} is recommended only when its benefits outweigh these costs \cite{android-ndk-getting-started,android-ndk-concepts,jni-tips}.
 
-This capability of use native code, extends the reach of Android apps beyond the managed runtime but also introduces explicit responsibilities for developers. Native code must handle its own memory management, threading and exception handling. This is significantly different from pure Java/Kotlin development.
+This capability to use native code extends the reach of Android apps beyond the managed runtime but also introduces explicit responsibilities for developers. Native code must handle its own memory management, threading and exception handling. This is significantly different from pure Java/Kotlin development.
 
 \begin{figure}
     \centering
@@ -35,14 +35,13 @@ Developers typically adopt native code for three main reasons:
 However, using the \gls{ndk} comes with tradeoffs. Native development adds complexity in build configuration, cross-ABI support, debugging, and maintenance across Android versions. Not all Android \glspl{api} are directly available through the \gls{ndk}, so bridging via \gls{jni} is often required for broad framework functionality \cite{android-ndk-concepts}. 
 
 \subsection{\glsxtrlong{jni}}
-The \gls{jni} (Java Native Interface) is a native programming interface that enables Java or Kotlin code running in a virtual machine to interoperate with libraries and applications written in C/C++ \cite{jni-spec-design,jni-spec-intro}. It allows managed code to call into native code, and for native code to call back into the \gls{vm}, manipulate Java objects, throw exceptions, and more. The \gls{jni} is designed to impose no restrictions on the implementation of the \gls{vm}, thereby preserving binary compatibility across \gls{vm} vendors \cite{jni-spec-intro}.  
+The \gls{jni} (Java Native Interface) is a native programming interface that enables Java or Kotlin code running in a virtual machine to interoperate with libraries and applications written in C/C++ \cite{jni-spec-intro}. It allows managed code to call into native code, and for native code to call back into the \gls{vm}, manipulate Java objects, throw exceptions, and more. The \gls{jni} is designed to impose no restrictions on the implementation of the \gls{vm}, thereby preserving binary compatibility across \gls{vm} vendors \cite{jni-spec-intro}.  
 
 Listing~\ref{lst:javaNative} shows a Java class declaring a \texttt{native} method, while Listing~\ref{lst:JNI} gives the corresponding C implementation on the native side.
 
 \begin{lstlisting}[language=Java+JNI, caption={Java class declaring a \texttt{native} method}, label={lst:javaNative}] 
 public class foo {
     private native double bar(int i, String s);
-    
     static {
         System.loadLibrary("native-lib");
     }
@@ -50,13 +49,10 @@ public class foo {
 \end{lstlisting}
 
 \begin{lstlisting}[language=C+JNI, caption={Native implementation of \texttt{bar}}, label={lst:JNI}]
-jdouble Java_pkg_foo_bar(JNIEnv *env,   // ptr to JNI interface
-                         jobject obj,   // "this" pointer
-                         jint i,        // first "real" parameter
-                         jstring s)     // second "real" parameter
-{
-    /* Method implementation */
-    return 0.0;
+jdouble Java_pkg_foo_bar(JNIEnv *env,          // ptr to JNI interface
+                         jobject obj,          // "this" pointer
+                         jint i, jstring s) {  // first and second parameter
+    return 0.0; /* Method implementation */
 }
 \end{lstlisting}
 
@@ -79,30 +75,31 @@ Mitigation requires defense-in-depth: modern Android hardening (ASLR/DEP, contro
 \subsection{Vulnerabilities and Impact on the Android Sandbox}
 Native memory-safety bugs remain a dominant cause of serious compromise on Android. Although the platform’s sandbox assigns each app a distinct \gls{uid} and further constrains it with SELinux policies, a native component compromised inside that boundary still runs with the app’s privileges and can expose secrets or capabilities already permitted (e.g., tokens, stored content, keys) \cite{android-app-sandbox,android-selinux}. In practice, this turns local corruption into high-impact data access or control-flow hijacking even without crossing process boundaries.
 
-Memory-safety defects in native libraries, such as buffer overflows, out-of-bounds reads/writes, use-after-free, and double free, belong to well-known \gls{cwe} families and frequently appear in \gls{cve} records \cite{cwe-mitre,cve-overview}. On Android, these errors may cause crashes or, in more severe cases, permit arbitrary code execution or data tampering depending on mitigations and exploitability assumptions \cite{android-native-risk}.
+Memory-safety defects in native libraries, such as buffer overflows, out-of-bounds reads/writes, use-after-free, and double free, belong to well-known \gls{cwe} families and frequently appear in \gls{cve} records. %\cite{cwe-mitre,cve-overview} 
+On Android, these errors may cause crashes or, in more severe cases, permit code execution or data tampering depending on mitigations and exploitability assumptions \cite{android-native-risk}.
 
 Attackers often amplify impact by chaining flaws across interfaces. Many system services are native and reachable over Binder; memory corruption in such a service can be triggered via \gls{ipc} by a malicious client to bypass app-level limits \cite{mao-nass-usenix25}. In other scenarios, native code may corrupt memory shared with the managed runtime (e.g., altering \gls{jni} or class metadata) by abusing memory-protection system calls, undermining Java-level safety invariants and enabling code injection or \gls{vm} subversion \cite{going-native-ndss17}. Another common vector is outdated third-party native libraries: empirical studies show that a significant fraction of popular apps ship unpatched vulnerable native libraries, and that developers take on average hundreds of days to apply upstream patches \cite{almanee-icse21}. This patch latency enables exploitation of known bugs even in apps that appear benign at the Java layer.
 
-Mitigation requires defense-in-depth: modern Android hardening (\gls{aslr}/\gls{dep}, control-flow integrity, memory tagging), combined with strict interface design and timely library updates, can significantly reduce the feasibility and reliability of exploitation even when bugs persist \cite{android-ndk-mte}.
+% Mitigation requires defense-in-depth: modern Android hardening (\gls{aslr}/\gls{dep}, control-flow integrity, memory tagging), combined with strict interface design and timely library updates, can significantly reduce the feasibility and reliability of exploitation even when bugs persist \cite{android-ndk-mte}.
 
 \section{Fuzzing}
-Fuzzing is an automated testing technique that repeatedly executes a target program with many inputs, either randomly generated or systematically derived, to expose defects such as crashes, assertion failures, or memory-safety violations. Modern fuzzers prioritise inputs that increase code coverage (e.g., edge or block coverage), and couple execution with hardening oracles (e.g., sanitizers) to turn latent memory errors into reliable, actionable signals \cite{sutton2007fuzzing,miller1990fuzz}.
+Fuzzing is an automated testing technique that repeatedly executes a target program with many inputs, either randomly generated or systematically derived, to expose defects such as crashes, assertion failures, or memory-safety violations. Modern fuzzers prioritise inputs that increase code coverage (e.g., edge or block coverage), and couple execution with hardening oracles (e.g., sanitizers) to turn latent memory errors into reliable, actionable signals \cite{sutton2007fuzzing,godefroid2008sage}.
 
 \subsection{Types}
-A fuzzer can be classified along three ways \cite{sutton2007fuzzing,godefroid2008sage}:
+A fuzzer can be classified along three ways:
 \begin{itemize}
-  \item \textbf{Input production:} \emph{generation-based} where inputs are produced from a model or specification and \emph{mutation-based} where inputs are produced by mutating existing seeds. Coverage-guided mutation fuzzers (e.g., \gls{aflpp}, libfuzzer) iteratively mutate seeds that increase coverage.
+  \item \textbf{Input production:} \emph{generation-based} where inputs are produced from a model or specification and \emph{mutation-based} where inputs are produced by mutating existing seeds. Coverage-guided mutation fuzzers (e.g., AFL++, libfuzzer) iteratively mutate seeds that increase coverage.
   \item \textbf{Input knowledge:} \emph{structured}, grammar- or model-based, aware of input format/protocol, or \emph{unstructured}, no knowledge of structure; “dumb” or purely random.
   \item \textbf{Program knowledge:} \emph{black-box}: no visibility into internals, \emph{grey-box}: lightweight instrumentation, e.g., edge coverage, and \emph{white-box}: constraint solving/symbolic execution to systematically steer execution, as in SAGE \cite{godefroid2008sage}.
 \end{itemize}
 
 \subsection{Uses}
-Fuzzing is primarily employed to discover security-relevant defects in safety- or security-critical software, especially memory-safety bugs in native code. Its strength lies in \emph{demonstrating the presence} of bugs via concrete, reproducible inputs. Proving correctness for all inputs requires a formal specification and formal methods; fuzzing complements, rather than replaces, such approaches \cite{sutton2007fuzzing}. In practice, fuzzing integrates into secure development lifecycles and CI pipelines to continuously test libraries, parsers, and interfaces that process untrusted data.
+Fuzzing is primarily employed to discover security-relevant defects in safety- or security-critical software. Its strength lies in \emph{demonstrating the presence} of bugs via concrete, reproducible inputs. Proving correctness for all inputs requires a formal specification and formal methods; fuzzing complements, rather than replaces, such approaches \cite{sutton2007fuzzing}. In practice, fuzzing integrates into secure development lifecycles and Continuous Integration pipelines to continuously test libraries, parsers, and interfaces that process untrusted data.
 
-\subsection{Android context (sanitizers as oracles).}
-On Android, fuzzing native components benefits from memory error detectors such as \gls{hwasan} and, historically, \gls{asan}. These sanitizers instrument code to detect out-of-bounds accesses, use-after-free, and related violations during fuzzing, producing precise diagnostics that accelerate crash triage \cite{hwasan-ndk,asan-aosp,asan-clang}.
+\subsection{Android context} %  (sanitizers as oracles).
+On Android, fuzzing native components benefits from memory error detectors such as Hardware-assisted AddressSanitizer (HWASan) and, historically, AddressSanitizer (ASan). These sanitizers instrument code to detect out-of-bounds accesses, use-after-free, and related violations during fuzzing, producing precise diagnostics that accelerate crash triage \cite{hwasan-ndk,asan-aosp,asan-clang}.
 
-Two widely used coverage-guided engines are \gls{aflpp} (a fork and extension of AFL with a rich ecosystem of mutators and instrumentation options) and \gls{libfuzzer}. Both have been successfully applied to native libraries, including on Android, to elicit high-quality crashes and to maximise coverage under realistic budgets \cite{aflpp-woot20,libfuzzer-llvm}.
+Two widely used coverage-guided engines are American Fuzzy Lop++ (AFL++) (a fork and extension of AFL with a rich ecosystem of mutators and instrumentation options) and LLVM In-Process Coverage-Guided Fuzzer (libFuzzer). Both have been successfully applied to native libraries, including on Android, to elicit high-quality crashes and to maximise coverage under realistic budgets \cite{aflpp-woot20,libfuzzer-llvm}.
 
 
 
@@ -119,7 +116,7 @@ Because \glspl{llm} predict tokens rather than verify facts, they can generate c
 
 \section{\glsxtrlong{mcp}}
 \gls{mcp} is an open protocol, introduced by Anthropic (creator of Claude) in November 2024, that standardises how \gls{ai} applications obtain and manage external context via a client–server architecture.
-An \emph{MCP host} (the \gls{ai} application) connects to one or more \emph{MCP servers} through dedicated \emph{MCP clients}, enabling the host to discover and use tools, read resources, and apply prompts exposed by servers. The protocol separates a JSON-RPC–based \emph{data layer} (primitives, lifecycle, notifications) from a \emph{transport layer} (e.g., stdio for local, streamable HTTP for remote), so the same message semantics work across local and remote deployments \cite{mcp-architecture,mcp-intro, mcp-transports}. In brief, servers contribute context and actions; clients manage capability negotiation and exchanges; the host orchestrates everything in the user-facing application \cite{mcp-architecture,mcp-server-concepts,mcp-client-concepts}. Figure~\ref{fig:mcp-simple-diagram} provides a high-level view of this host–client–server pattern and example integrations.
+An \emph{MCP host} (the \gls{ai} application) connects to one or more \emph{MCP servers} through dedicated \emph{MCP clients}, enabling the host to discover and use tools, read resources, and apply prompts exposed by servers. The protocol separates \emph{data layer} (primitives, lifecycle, notifications) from a \emph{transport layer} (e.g., stdio for local, streamable HTTP for remote), so the same message semantics work across local and remote deployments \cite{mcp-architecture,mcp-intro, mcp-transports}. In brief, servers contribute context and actions; clients manage capability negotiation and exchanges; the host orchestrates everything in the user-facing application \cite{mcp-architecture,mcp-server-concepts,mcp-client-concepts}. Figure~\ref{fig:mcp-simple-diagram} provides a high-level view of this host–client–server pattern and example integrations.
 
 \begin{figure}
     \centering
@@ -127,14 +124,6 @@ An \emph{MCP host} (the \gls{ai} application) connects to one or more \emph{MCP 
     \caption[High-level MCP architecture.]%
       {High-level \gls{mcp} architecture. The \gls{mcp} host (e.g., chat interface or IDE) coordinates one or more \gls{mcp} clients, each connected to an \gls{mcp} server that exposes tools, resources, and prompts \cite{mcp-intro}.}
     \label{fig:mcp-simple-diagram}
-\end{figure}
-
-
-\begin{figure}
-    \centering
-    \scalebox{0.8}{\input{tikzpicture/mcp-interaction}}
-    \caption[MCP interaction]{MCP interaction: capability discovery, tool selection, invocation, and reply.}
-    \label{fig:mcp-interaction}
 \end{figure}
 
 \subsection{MCP Host}
@@ -150,6 +139,12 @@ An \gls{mcp} \emph{server} wraps external systems (e.g. files, databases, revers
 This design decouples model/UX from system integrations and enables reuse across different hosts and models \cite{mcp-tools}. 
 In Figure~\ref{fig:mcp-interaction}, servers sit on the right, each encapsulating one integration boundary (e.g., Jadx, Ghidra, a code search index).
 
+\begin{figure}
+    \centering
+    \scalebox{0.8}{\input{tikzpicture/mcp-interaction}}
+    \caption[MCP interaction]{MCP interaction: capability discovery, tool selection, invocation, and reply.}
+    \label{fig:mcp-interaction}
+\end{figure}
 
 \subsection{Interaction}
 Figure~\ref{fig:mcp-interaction} illustrates a typical flow. 
