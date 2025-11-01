@@ -110,7 +110,8 @@ Two widely used coverage-guided engines are American Fuzzy Lop++ (AFL++) (a fork
 \glspl{llm} are deep neural networks based on the Transformer architecture, which replaces recurrence/convolution with stacked self-attention and feed-forward layers to model long-range dependencies efficiently \cite{vaswani2017attention}. Today’s \glspl{llm} are pre-trained on large corpora via next-token prediction and then adapted to follow user prompts. 
 
 \subsection{Limitations and Hallucinations}
-Because \glspl{llm} predict tokens rather than verify facts, they can generate confident but incorrect content (``hallucinations''). Surveys and recent studies document multiple forms (e.g., intrinsic or confabulated outputs) and show that even state-of-the-art models may produce fluent fabrications \cite{ji2023hallucination,farquhar2024semanticentropy}. In security-oriented workflows such as vulnerability triage, this can manifest as invented \gls{cve} identifiers, non-existent \glspl{api} or packages, fabricated proof-of-concept details, or misattributed stack traces, errors that can mislead severity assessment or waste analyst time. Empirical work on code-generation further highlights ``package hallucinations'', where models recommend non-existent libraries, creating supply-chain risk if an attacker later publishes a malicious package with that name \cite{spracklen2025package}. Consequently, any use of \glspl{llm} for triage should treat outputs as hypotheses to be checked against authoritative sources and artefacts (code, binaries, advisories), and prefer designs that promote verifiability and uncertainty signalling rather than unconditional trust.
+Because \glspl{llm} predict tokens rather than verify facts, they can generate confident but incorrect content (``hallucinations''). Surveys and recent studies document multiple forms (e.g., intrinsic or confabulated outputs) and show that even state-of-the-art models may produce fluent fabrications \cite{ji2023hallucination,farquhar2024semanticentropy}. In security-oriented workflows such as vulnerability triage, this can manifest as invented \gls{cve} identifiers, non-existent \glspl{api} or packages, fabricated proof-of-concept details, or misattributed stack traces, errors that can mislead severity assessment or waste analyst time. Empirical work on code-generation further highlights ``package hallucinations'', where models recommend non-existent libraries, creating supply-chain risk if an attacker later publishes a malicious package with that name \cite{spracklen2025package}. 
+%Consequently, any use of \glspl{llm} for triage should treat outputs as hypotheses to be checked against authoritative sources and artefacts (code, binaries, advisories), and prefer designs that promote verifiability and uncertainty signalling rather than unconditional trust.
 
 
 
@@ -120,7 +121,7 @@ An \emph{MCP host} (the \gls{ai} application) connects to one or more \emph{MCP 
 
 \begin{figure}
     \centering
-    \scalebox{0.8}{\input{tikzpicture/mcp-simple-diagram}}
+    \scalebox{0.75}{\input{tikzpicture/mcp-simple-diagram}}
     \caption[High-level MCP architecture.]%
       {High-level \gls{mcp} architecture. The \gls{mcp} host (e.g., chat interface or IDE) coordinates one or more \gls{mcp} clients, each connected to an \gls{mcp} server that exposes tools, resources, and prompts \cite{mcp-intro}.}
     \label{fig:mcp-simple-diagram}
@@ -135,13 +136,11 @@ An \gls{mcp} \emph{client} is a protocol-level component created by the host to 
 In Figure~\ref{fig:mcp-interaction}, clients appear as the ''middle`` connectors: they translate host intents (e.g., ''run tool T``) into \gls{api} call and relay the server’s results back to the host.
 
 \subsection{MCP Server}
-An \gls{mcp} \emph{server} wraps external systems (e.g. files, databases, reverse-engineering tools) and presents them as protocol objects: tools: invokable functions with JSON Schemas, resources: readable artefacts, and prompts: reusable task templates. Servers publish a capability manifest so that clients can discover what is available and how to access it. The \gls{mcp} \emph{server} provides tools that enable \glspl{llm} to perform actions, carry out deterministic computations and interact with external services. 
-This design decouples model/UX from system integrations and enables reuse across different hosts and models \cite{mcp-tools}. 
-In Figure~\ref{fig:mcp-interaction}, servers sit on the right, each encapsulating one integration boundary (e.g., Jadx, Ghidra, a code search index).
+An \gls{mcp} \emph{server} wraps external systems (e.g. files, databases, reverse-engineering tools) and presents them as protocol objects: \emph{tools}, \emph{resources}, and \emph{prompts}. It publishes a capability manifest so that clients can discover what is available and how to access it. The \gls{mcp} \emph{server} provides tools enabling \glspl{llm} to perform actions, deterministic computations, and external interactions. This design decouples model/UX from system integrations and promotes reuse across different hosts and models \cite{mcp-tools}. In Figure~\ref{fig:mcp-interaction}, servers sit on the right, each encapsulating one integration boundary (e.g., Jadx, Ghidra, or a code search index).
 
-\begin{figure}
+\begin{figure}[H]
     \centering
-    \scalebox{0.8}{\input{tikzpicture/mcp-interaction}}
+    \scalebox{0.75}{\input{tikzpicture/mcp-interaction}}
     \caption[MCP interaction]{MCP interaction: capability discovery, tool selection, invocation, and reply.}
     \label{fig:mcp-interaction}
 \end{figure}
@@ -163,19 +162,20 @@ Figure~\ref{fig:mcp-interaction} illustrates a typical flow.
 Modern vulnerability workflows rely on interoperable standards that identify issues, classify their root causes, and communicate technical severity. 
 
 \subsection{\glsxtrlong{cwe}}
-The \gls{cwe} is a community-curated taxonomy of common software and hardware weakness types (e.g., buffer overflow, use-after-free). It provides standardised identifiers and structured descriptions to support detection, prevention, and education across the secure development lifecycle \cite{cwe-about}. Unlike CVE (which tracks specific \emph{instances}), \gls{cwe} captures \emph{classes} of underlying faults, enabling aggregation and trend analysis at the root-cause level \cite{cwe-list}.
+The \gls{cwe} is a community-curated taxonomy of common software and hardware weakness types (e.g., buffer overflow, use-after-free). It provides standardised identifiers and structured descriptions to support detection, prevention, and education across the secure development lifecycle \cite{cwe-about}. Unlike CVE (which tracks specific \emph{instances}), \gls{cwe} captures \emph{classes} of underlying faults, enabling aggregation and trend analysis at the root-cause level. %\cite{cwe-list}.
 
 \subsection{\glsxtrlong{cve}}
 The \gls{cve} Programme assigns unique identifiers to publicly disclosed vulnerabilities, providing a single canonical reference for coordination across vendors, researchers, and users. A \gls{cve} entry names the specific issue (product, version, and vulnerability description) and links to public references; other databases may enrich it with severity and technical details \cite{cve-overview}. In practice, national or vendor repositories (e.g., \gls{nvd}) attach \gls{cvss} scores and map each \gls{cve} to one or more \gls{cwe} categories for analytics and prioritisation \cite{nvd-cve-process,cvss40-nvd-support}.
 
 \subsection{\glsxtrlong{cvss}}
-The \gls{cvss} is an open, vendor-neutral framework for describing the intrinsic characteristics and severity of a vulnerability through a set of metrics that yield a numerical score and qualitative severity band. \gls{cvss} communicates \emph{severity}, not overall \emph{risk}; operational risk assessment should incorporate asset context, threat activity, and environmental factors beyond the Base score \cite{cvss31-user-guide}.
+The \gls{cvss} is an open, vendor-neutral framework for describing the intrinsic characteristics and severity of a vulnerability through a set of metrics that yield a numerical score and qualitative severity band. \gls{cvss} communicates \emph{severity}, not overall \emph{risk}; operational risk assessment should incorporate asset context, threat activity, and environmental factors beyond the Base score \cite{cvss40-spec}.
 
 \paragraph{Relation}
-In triage and remediation workflows, \gls{cve} entries identify concrete vulnerabilities; each entry can be mapped to \gls{cwe} identifiers that explain the underlying weakness type; \gls{cvss} scores (often provided by downstream databases) express the vulnerability’s technical severity. Together, \gls{cwe}$\rightarrow$\gls{cve}$\rightarrow$\gls{cvss} forms a pipeline from root-cause taxonomy to instance tracking and severity quantification \cite{nvd-cve-process}.
+In triage and remediation workflows, \gls{cve} entries identify concrete vulnerabilities; each entry can be mapped to \gls{cwe} identifiers that explain the underlying weakness type; \gls{cvss} scores (often provided by downstream databases) express the vulnerability’s technical severity. Together, \gls{cwe}$\rightarrow$\gls{cve}$\rightarrow$\gls{cvss} forms a pipeline from root-cause taxonomy to instance tracking and severity quantification. %\cite{nvd-cve-process}.
 
 \section{Reverse engineering}
-Reverse engineering in software is the analysis of binaries or bytecode to recover design and implementation information-disassembly, control/data flows, and higher-level structure, when source or specifications are incomplete or unavailable \cite{springer-sre-overview,samuelson1990re}. In practice, reverse engineering workflows combine a disassembler/decompiler with cross-reference search, symbol inspection, and targeted decompilation to produce evidence suitable for auditing and triage.
+Reverse engineering in software is the analysis of binaries or bytecode to recover design and implementation information-disassembly, control/data flows, and higher-level structure, when source or specifications are incomplete or unavailable \cite{springer-sre-overview}. %,samuelson1990re}. 
+In practice, reverse engineering workflows combine a disassembler/decompiler with cross-reference search, symbol inspection, and targeted decompilation to produce evidence suitable for auditing and triage.
 
 \subsection{Ghidra}
 Ghidra is an open-source software reverse-engineering framework developed by the NSA. It provides disassembly, decompilation, graphing, and scripting across multiple architectures, and is widely used in vulnerability research and malware analysis \cite{ghidra-github}. 
@@ -184,7 +184,7 @@ In the pipeline, Ghidra is used for Android native libraries packaged as ELF sha
 
 \subsubsection{MCP integration: \texttt{pyghidra-mcp}.}
 \textcolor{red}{Non so se l'introduzione a questo mcp specifico sia più da implmentation che da backgroud}
-To access Ghidra from the \gls{llm}, we used \emph{pyghidra-mcp}, a headless \gls{mcp} server that bridges Ghidra’s ProgramAPI/FlatProgramAPI to \gls{llm}-based clients \cite{pyghidra-mcp}. The server provides the following capabilities:
+To access Ghidra from the \gls{llm}, \emph{pyghidra-mcp} was used, a headless \gls{mcp} server that bridges Ghidra’s ProgramAPI/FlatProgramAPI to \gls{llm}-based clients \cite{pyghidra-mcp}. The server provides the following capabilities:
 \begin{itemize}
   \item \texttt{search\_code}: semantic code search using vector embeddings (quickly surfacing candidate functions).
   \item \texttt{list\_cross\_references}: inbound/outbound x-refs for a symbol or address.
