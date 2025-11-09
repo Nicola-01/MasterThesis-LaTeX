@@ -459,6 +459,11 @@
     morekeywords=[2]{JNIEnv,jobject,jint,jdouble,jstring,JNIEXPORT,JNICALL},
 }
 
+\lstdefinelanguage{py}[]{Python}{
+    deletekeywords={int,double,boolean,long,short,byte,char,float,void,native},
+    morekeywords=[2]{run},
+}
+
 \lstdefinelanguage{json}{
   string=[s]{"}{"},
   stringstyle=\color{SchoolColor},

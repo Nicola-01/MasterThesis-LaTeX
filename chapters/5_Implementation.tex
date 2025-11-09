@@ -1,7 +1,7 @@
 \chapter{Implementation}
 \label{chp:impl}
 
-The triage system is implemented in Python~3 and orchestrates a tool-grounded \gls{llm} over crashes discovered by the fuzzing pipeline (see \emph{Preliminaries}). Conceptually, the program:\\
+The triage system, implemented in Python3, orchestrates an \gls{llm}-based tool over crashes discovered by the fuzzing pipeline(see chapter~\ref{chp:preliminaries} (\emph{Preliminaries})). Conceptually, the program:\\
 (i) ingests POIROT output (i.e. stack traces).\\
 (ii) enriches them with reverse-engineering context via the \gls{mcp} (Jadx for bytecode/manifest, Ghidra for native disassembly/decompilation).\\
 (iii) produces a structured judgement comprising a vulnerability likelihood, a succinct rationale anchored to concrete evidence (frames, symbols, code hunks), and a severity estimate. 
@@ -12,6 +12,7 @@ The implementation emphasises strict data modelling, explicit tool adaptors, and
 
 
 \section{Libraries and Dependencies}
+\textcolor{red}{Da vedere}
 The codebase relies on a small set of focused Python libraries and external tools:
 \begin{itemize}
   \item \texttt{pydantic} (v2.12.3) for strict, typed data models (e.g., crash summaries and tool responses) and runtime validation. This allows us to require that the \gls{llm} return an instance conforming to a predefined model, so the output can be parsed deterministically (without ad-hoc prompt parsing) and serialised/deserialised as JSON with minimal glue code.
@@ -48,8 +49,12 @@ Under \texttt{MCPs/prompts/}, \texttt{ghidra\_prompts.py} and \texttt{jadx\_prom
     \label{fig:program-structure}
 \end{figure}
 
-\section{LLM and MCP integration}
-LLM-agnostic 
+\textcolor{red}{DA AGGIORNARE}
+
+\section{Docker}
+
+\section{\gls{llm} and \gls{mcp} integration}
+The program is \gls{llm}-agnostic, so the program is not working only for one specific \gls{llm} model, but can use different, this gives you the freedom to adopt any \gls{llm} that works best for your needs, easily switch between options, and integrate specialized or customer-specific models when needed. The program supports \texttt{OpenAI}, \texttt{Gemini}, \texttt{Local Ollama models} 
 \textcolor{red}{TO add introfuction}
 
 \subsection{Agent setup}
@@ -65,11 +70,44 @@ By default, \texttt{get\_agent.py} builds a Google Gemini backend using \texttt{
 For offline or on-premise execution, \texttt{ollamaLocal.py} configures a local backend by pairing \texttt{OpenAIChatModel} with \texttt{OllamaProvider} (default base URL \texttt{http://localhost:11434/v1}) and an Ollama model name (e.g., \texttt{qwen3:8b}). The agent interface remains identical (same \texttt{system\_prompt}, \texttt{output\_type}, and \gls{mcp} toolsets). At start-up, a pre-flight check can verify that the requested model is available (e.g., via \texttt{ollama list}); if missing, the program should surface a clear error and guidance to pull the model.
 
 
-\subsection{MCP setup}
+\subsection{\gls{mcp} setup}
+For let the \gls{llm} to do the triage was use two \glspl{mcp}. Both had required extra setup for work automatically with the rest of tool.
 \subsubsection{Jadx}
+For integrate Jadx in the tool was use \texttt{jadx-ai-mcp}\footnote{https://github.com/zinja-coder/jadx-ai-mcp}. The \gls{mcp}-server for works required the Jadx-GUI, so the tool, when the analisis for a APK starts, start a Jadx session using the command \verb|jadx-gui <apk>|, this open a Jadx gui interface, then the program wait a timeout to be sure that the \gls{mcp}-server goes started. To handle the session and the use of Jadx exist the file \texttt{jadx\_helper\_functions.py}, that has the task to Start the Jadx Gui with the specific application, and wait the \gls{mcp} server to be started, if it doesn't start in timeout-timing, the program will stop with an error. The .py file also help to kill the jadx session when is no more needed, or there is the need to change APK, there is also a binding with the current program session, to kill jadx when the program will close.
+
+In Figure~\ref{lst:useJadxMCP} shows h, 
+
+\begin{lstlisting}[language=Python, caption={method get\_jadx\_metadata}, label={lst:getMetadata}]
+server = make_jadx_server()
+...
+async with get_agent(JADX_APP_METADATA, AppMetadata, [server], model_name=model_name) as j_agent:
+    j_meta = await j_agent.run("Extract app metadata from the currently open Jadx project.")
+app: AppMetadata = j_meta.output   
+...
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption={Use of MCP}, label={lst:useJadxMCP}] 
+kill_jadx()  # kill previous instance (if any)
+start_jadx_gui(str(apk))
+# Extract metadata via Jadx MCP
+
+try:
+    appMetadata = asyncio.run(get_jadx_metadata(model_name=args.model_name, verbose=args.verbose, debug=args.debug))      
+except Exception as e:
+    handle_model_errors(e)
+\end{lstlisting}
+
+
+
 \subsubsection{Ghidra}
+For integrate Ghidra in the tool was use \texttt{jadx-ai-mcp}\footnote{https://github.com/LaurieWired/GhidraMCP}
+
 \subsection{Use of Pydantic}
+
 \section{POIROT's output and use}
+
+\textcolor{red}{Passare direttamente la cartella target\_APK, opzionale è un file .txt che contiene pkgnames, che suppora anche i commenti con \#}
+
 \section{Triaging of Vulnerabilities}
 \subsection{APK metadata extraction}
 \subsection{Extraction of .so files}
