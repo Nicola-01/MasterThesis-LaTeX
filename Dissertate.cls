@@ -464,6 +464,18 @@
     morekeywords=[2]{run},
 }
 
+\lstdefinelanguage{pyPrompt}[]{Python}{
+    deletekeywords={for, any, in, not, or, if, and},
+    morekeywords={system_prompt, user_prompt, response_str},
+}
+
+\lstdefinelanguage{pyMCP}[]{Python}{
+    % morekeywords={run},
+    morekeywords={async, await},
+    morekeywords=[2]{AppMetadata, MCPServerStdio, MCPServerStdio},
+    morekeywords=[3]{run, make_jadx_server, get_agent, getenv, make_ghidra_server, make_jadx_server},
+}
+
 \lstdefinelanguage{json}{
   string=[s]{"}{"},
   stringstyle=\color{SchoolColor},
@@ -531,3 +543,16 @@ folder style/.style={draw=foldercolor!80!black, top color=foldercolor!40, bottom
     folder icons/.style={folder, this folder size=#1, folder tree indent=3*#1},
     folder icons/.default={10pt},
 }
+
+\usepackage{enumitem}
+\newenvironment{myitemize}{
+  \begin{itemize}[noitemsep, topsep=0pt]
+    }{
+  \end{itemize}
+    }
+
+\NewDocumentEnvironment{myenumerate}{O{}}{
+    \begin{enumerate}[noitemsep, topsep=0pt, #1]
+    }{
+    \end{enumerate}
+    }

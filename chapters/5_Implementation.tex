@@ -53,63 +53,357 @@ Under \texttt{MCPs/prompts/}, \texttt{ghidra\_prompts.py} and \texttt{jadx\_prom
 
 \section{Docker}
 
+For this project, Docker was adopted to encapsulate the entire triage system and its dependencies in a reproducible and portable image. Docker is an open-source platform designed to automate the deployment of applications within lightweight, isolated environments known as \emph{containers}. Each container bundles an application together with its dependencies, configuration files and operating system libraries, ensuring consistent behaviour across different environments. 
+
+This ensures that the analysis pipeline can be executed identically on local workstations, cloud servers or continuous integration infrastructures, regardless of the host configuration.
+
+The \texttt{Dockerfile} defines a minimal image that includes all components required:
+\begin{myitemize}
+    \item Python~3.12 runtime with all dependencies;
+    \item the \texttt{pydantic} and \texttt{pydantic\_ai} libraries for typed models and agent orchestration;
+    \item \texttt{Ghidra} and \texttt{Jadx} and reciprocal \gls{mcp} servers;
+    \item environment configuration for \texttt{LLM\_MODEL\_NAME}, \texttt{GHIDRA\_MCP\_DIR}, and \texttt{JADX\_MCP\_DIR}.
+\end{myitemize}
+
+\vspace{4mm}
+
+Two auxiliary scripts simplify the deployment and execution of the containerised system.  
+The first, \texttt{dockerSetup.sh}, automates the build process and initial execution of the container. It builds the container from the provided \texttt{Dockerfile} and assigns it the name \texttt{triage\_dev}. By naming the container, its configuration and state are retained across sessions, allowing the environment to be restarted without needing to reconfig it each time.
+
+During setup, \texttt{dockerSetup.sh} mounts two persistent volumes:
+\begin{itemize}
+    \item \textbf{workspace}: synchronises the project’s source code between the host machine and the container, enabling code edits and updates to take effect immediately without rebuilding the image;
+    \item \textbf{APKs}: provides shared access to the APK files to be analysed. If the APKs (the POIROT’s output) are placed in this directory, the container can access them directly; otherwise, the container remains isolated from the host filesystem, ensuring safe separation of data.
+\end{itemize}
+
+The first execution of the container requires several additional configuration steps to enable the integration of \gls{mcp} servers and authentication for Gemini-CLI (if used):
+
+\paragraph{Gemini CLI setup.}
+Gemini authentication must be performed once, as the CLI requires an OAuth credential file. Since the Docker container lacks browser access, the login is completed externally on the host machine. 
+
+\paragraph{Jadx MCP server.}
+The Jadx MCP server is generally installed automatically when the container is first built. However, if errors occur, it can be installed manually by following the instructions.
+
+\paragraph{Ghidra MCP server.}
+The Ghidra MCP server is pre-packaged in the Docker image, but not installed, since required the use of the \gls{gui}. To activate it, Ghidra must first be launched in the container using. The setup then follows the official configuration steps described in the GhidraMCP documentation.
+
+The second script, \texttt{dockerRun.sh}, provides a simplified interface for launching the container after it has been configured. It executes only a few lines to start the existing \texttt{triage\_dev} container, resuming the previously configured environment without rebuilding or reinitialising it.
+
+
 \section{\gls{llm} and \gls{mcp} integration}
-The program is \gls{llm}-agnostic, so the program is not working only for one specific \gls{llm} model, but can use different, this gives you the freedom to adopt any \gls{llm} that works best for your needs, easily switch between options, and integrate specialized or customer-specific models when needed. The program supports \texttt{OpenAI}, \texttt{Gemini}, \texttt{Local Ollama models} 
-\textcolor{red}{TO add introfuction}
+The system is \gls{llm}-agnostic, it is not tied to a single model but supports multiple options. This flexibility allows selection of the provider that best fits the task, easy switching between models, and integration of custom or domain-specific \gls{llm}s when required. Currently, the program supports \texttt{OpenAI}, \texttt{Gemini} and local \texttt{Ollama} models, and can be extended to include additional vendors.
+
+
+The system integrates Large Language Models (LLMs) with reverse-engineering tools through the Model Context Protocol (MCP). This combination enables tool-grounded reasoning, where the LLM can access, query, and interpret program artefacts in a controlled and reproducible manner.  
+The implementation follows a modular and provider-agnostic architecture, ensuring that the same triage logic can operate with different LLM vendors or even fully local models. This flexibility simplifies experimentation and allows future substitution of models without altering the rest of the pipeline.
+
+
+%\textcolor{red}{TO add introfuction}
 
 \subsection{Agent setup}
-The system is provider-agnostic and selects the backend by model name. At start-up, the agent is instantiated with \texttt{pydantic\_ai.Agent}, a target \emph{output type} (a \texttt{pydantic} model), and a list of \gls{mcp} toolsets (\texttt{MCPServerStdio}). If no model is specified, the code falls back to the \texttt{LLM\_MODEL\_NAME} environment variable (default: \texttt{gemini-2.5-flash}) and constructs a Google Gemini backend; alternatively, a local backend can be created via Ollama. The agent wiring and defaults are implemented in \texttt{MCPs/get\_agent.py} and \texttt{MCPs/ollamaLocal.py}.
+The agent is created through the function \texttt{get\_agent} defined in \texttt{MCPs/get\_agent.py}.  
+This function instantiates a \texttt{pydantic\_ai.Agent} object that coordinates the chosen \gls{llm} and a list of MCP toolsets (\texttt{MCPServerStdio}).  
+The agent receives:
+\begin{itemize}
+    \item a \emph{system prompt}, which defines its high-level reasoning role (for example, vulnerability assessor);
+    \item an \emph{output type}, specified as a strict \texttt{pydantic} model that constrains the expected JSON schema of responses;
+    \item a list of connected MCP servers.
+\end{itemize}
 
-\paragraph{OpenAI}
-The architecture permits adding OpenAI GPT models by swapping in an OpenAI-compatible model/provider within the same \texttt{pydantic\_ai.Agent} construction. Although not enabled in the current \texttt{get\_agent.py}, the same pattern used for Gemini and Ollama applies (model selection by name, identical toolset attachment, and the same typed \texttt{output\_type}).
+The function automatically selects the appropriate model provider according to the prefix of the model name supplied at start-up:
+\begin{itemize}
+    \item names beginning with \texttt{gpt-} initialise an \texttt{OpenAIChatModel} via the \texttt{OpenAIProvider};
+    \item names beginning with \texttt{gemini-} initialise a \texttt{GoogleModel} via the \texttt{GoogleProvider};
+    \item any other identifier defaults to a locally hosted model served through the \texttt{OllamaProvider}.
+\end{itemize}
+This logic allows seamless switching between cloud-based and local models.
 
-\paragraph{Gemini}
-By default, \texttt{get\_agent.py} builds a Google Gemini backend using \texttt{GoogleModel} and \texttt{GoogleProvider}, sourcing the API key from \texttt{LLM\_API\_KEY}. The default model is \texttt{gemini-2.5-flash} unless overridden by the \texttt{model\_name} parameter or \texttt{LLM\_MODEL\_NAME}. The resulting \texttt{Agent} receives the \emph{system prompt}, the strict \texttt{output\_type} (our \texttt{pydantic} schema), and the list of \gls{mcp} toolsets, enabling tool-grounded reasoning with typed outputs.
+
+\paragraph{Gemini-CLI.}
+If the model name is specified as \texttt{gemini-cli}, the program interacts with the Gemini Command-Line Interface instead of the standard \gls{api} endpoint.
+This configuration was introduced to bypass \gls{api} usage quotas and benefit from the higher request limits available with \texttt{gemini-2.5-pro}.
+
+The integration is handled by the helper module \texttt{MCPs/geminiCLI.py}, which provides two key functions: \texttt{query\_gemini\_cli()} and \texttt{gemini\_response\_parser()}.
+Since the Gemini CLI does not support distinct system and user prompts or structured JSON output (as required by \texttt{pydantic\_ai.Agent}), these functions implement a custom prompting and parsing layer.
+
+\texttt{query\_gemini\_cli()} builds a unified text prompt combining the system and user contexts, executes the \texttt{gemini} command via subprocess, and retries up to four times if parsing fails, Listing~\ref{lst:geminiCliPrompr}.
+The model’s response is then passed to \texttt{gemini\_response\_parser()}, which cleans the raw \gls{cli} output and attempts to parse the result as JSON. If the output cannot be validated against the expected schema, the function retries; after four failed attempts, an error is raised.
+
+\begin{lstlisting}[language=pyPrompt, caption={Prompt used in Gemini-CLI. The \texttt{system\_prompt} and \texttt{user\_prompt} are identical to those used in the standard cloud-based \gls{llm} agent, while \texttt{require\_response} defines the JSON structure that the model must produce.}
+, label={lst:geminiCliPrompr}]
+IMPORTANT: DO NOT MODIFY OR EXECUTE CODE. RESPOND ONLY VIA MCP CALLS. DO NOT ANALYZE OR RUN FILES. READ-ONLY CONTEXT.
+
+SYSTEM PROMPT (upstream, for reference — do not override constraints above):
+{system_prompt}
+
+USER PROMPT: {user_prompt}
+
+RESPONSE INSTRUCTIONS:
+1) Use MCP tools/servers only if needed to answer.
+2) Do not edit or run any code.
+3) If the user asks for code changes/execution, refuse and propose an MCP-only path.
+
+{response_str}
+
+\end{lstlisting}
+
+
+This approach ensures compatibility between the CLI model and the structured output format required by the pipeline, enabling the program to use \texttt{gemini-2.5-pro} locally while maintaining schema-validated results consistent with API-based executions.
+
+
+%If the model name is specified as \texttt{gemini-cli}, the program interacts with the Gemini Command-Line Interface rather than the API endpoint.
+%The configuration with \texttt{gemini-cli} was added since it allow higher limits of use about \texttt{gemini-2.5-pro} without directly use the \glspl{api}. The use of gemini-cli along other normal cloud \gls{api} models required extra configurations, infanct exist the helper function file \texttt{MCPs/geminiCLI.py}, that provied `query\_gemini\_cli`, with a sligtly edited propt to shere to the \gls{llm}, infact gemini cli doesn't have the system prompt and user prompt, have just the standart prompt, and also gemini cli doesn't support \texttt{pydantic\_ai.Agent} and the required JSON output, so I have to manage it manualy, and verifing the correct structure that I  required using `gemini_response_parser`, thet returns the output that I wanted, the model have 4 atepts to create that output, otherwise the program reise an error
+
+
 
 \paragraph{Local LLM (Ollama)}
-For offline or on-premise execution, \texttt{ollamaLocal.py} configures a local backend by pairing \texttt{OpenAIChatModel} with \texttt{OllamaProvider} (default base URL \texttt{http://localhost:11434/v1}) and an Ollama model name (e.g., \texttt{qwen3:8b}). The agent interface remains identical (same \texttt{system\_prompt}, \texttt{output\_type}, and \gls{mcp} toolsets). At start-up, a pre-flight check can verify that the requested model is available (e.g., via \texttt{ollama list}); if missing, the program should surface a clear error and guidance to pull the model.
+If the model name does not match either of the previous prefixes (\texttt{gpt-}/\texttt{gemini-}), the agent assumes a local configuration and instantiates an \texttt{OpenAIChatModel} paired with the \texttt{OllamaProvider}.  
+This setup enables on-premise execution and full data isolation, making it suitable for offline research or restricted environments where cloud connectivity or data sharing is limited.
+
+The main limitation of offline models is computational power.  
+Local inference lacks the large-scale infrastructure available to cloud-based providers: even high-end consumer hardware struggles to run models exceeding 20~billion parameters, which typically require around 14~GB of GPU VRAM.  
+While larger models exist, they demand specialised GPUs and significant memory resources.  
+
+Among the locally tested models, \texttt{gpt-oss:20b}\footnote{\url{https://ollama.com/library/gpt-oss}} provided the best compatibility with \glspl{mcp} and \texttt{pydantic\_ai} type casting.  
+However, it still showed limited reliability when producing structured JSON outputs and to get the informations from \glspl{mcp}.  
+Due to these constraints, the implementation ultimately switched to the \texttt{gemini-cli} configuration, which offered a better balance between accessibility, performance, and support for schema-constrained outputs.
 
 
 \subsection{\gls{mcp} setup}
-For let the \gls{llm} to do the triage was use two \glspl{mcp}. Both had required extra setup for work automatically with the rest of tool.
+
+To enable the \gls{llm} to automatically perform triage, two \glspl{mcp} are used: one for \texttt{Ghidra} and one for \texttt{Jadx}.  
+Both require additional setup to operate autonomously within the triage pipeline.
+
 \subsubsection{Jadx}
-For integrate Jadx in the tool was use \texttt{jadx-ai-mcp}\footnote{https://github.com/zinja-coder/jadx-ai-mcp}. The \gls{mcp}-server for works required the Jadx-GUI, so the tool, when the analisis for a APK starts, start a Jadx session using the command \verb|jadx-gui <apk>|, this open a Jadx gui interface, then the program wait a timeout to be sure that the \gls{mcp}-server goes started. To handle the session and the use of Jadx exist the file \texttt{jadx\_helper\_functions.py}, that has the task to Start the Jadx Gui with the specific application, and wait the \gls{mcp} server to be started, if it doesn't start in timeout-timing, the program will stop with an error. The .py file also help to kill the jadx session when is no more needed, or there is the need to change APK, there is also a binding with the current program session, to kill jadx when the program will close.
 
-In Figure~\ref{lst:useJadxMCP} shows h, 
+The integration of Jadx into the pipeline relies on the \texttt{jadx-ai-mcp}\footnote{\url{https://github.com/zinja-coder/jadx-ai-mcp}} server, which exposes Jadx features through the \gls{mcp} protocol.  
+Listing~\ref{lst:jadxServer} shows how the \gls{mcp} connection for Jadx is established using the \texttt{MCPServerStdio} interface, invoking the \texttt{jadx\_mcp\_server.py} script through \texttt{uv} from the directory specified in the environment variable \texttt{JADX\_MCP\_DIR}.
 
-\begin{lstlisting}[language=Python, caption={method get\_jadx\_metadata}, label={lst:getMetadata}]
-server = make_jadx_server()
+
+\begin{lstlisting}[language=pyMCP, caption={Function \texttt{make\_jadx\_server} used to initialise the Jadx MCP connection}, label={lst:jadxServer}]
+def make_jadx_server(timeout: int = 60) -> MCPServerStdio:
+
+    jadx_dir = os.getenv("JADX_MCP_DIR")
+    return MCPServerStdio(
+        "uv",
+        args=["--directory", jadx_dir, "run", "jadx_mcp_server.py"],
+        timeout=timeout,
+    )
+\end{lstlisting}
+
+
+
+This server depends on the graphical Jadx application (\texttt{jadx-gui}) being active.  
+Therefore, when analysis of an \gls{apk} begins, the program launches a dedicated Jadx session using the command: \verb|jadx-gui <apk>| 
+This opens the \gls{gui} instance and allows the \texttt{jadx-ai-mcp} plugin to start its server.  
+
+Session management is handled by the helper module \texttt{jadx\_helper\_functions.py}, which contains utilities to start, monitor, and terminate the Jadx process.  
+The function \texttt{start\_jadx\_gui()} launches the GUI, monitors its output stream, and blocks execution until the MCP server is detected or a timeout occurs.  
+If Jadx fails to start within the configured timeout, the function terminates the process and aborts the analysis.  
+The module provides \texttt{kill\_jadx()}, used to gracefully stop the Jadx process when it is no longer required or when switching to a different \gls{apk}.  
+Signal handlers ensure that Jadx is automatically terminated if the main program exits unexpectedly.
+
+Once the server is running, the triage agent connects to the \texttt{jadx-ai-mcp} endpoint to query project-level information.  
+Listing~\ref{lst:getMetadata} shows how the system retrieves the \gls{apk} metadata (application name, package, minimum and target SDK, and version) using a dedicated agent call.
+
+\begin{lstlisting}[language=pyMCP, caption={Method \texttt{get\_jadx\_metadata} that returns the app metadata from Jadx}, label={lst:getMetadata}]
+server: MCPServerStdio = make_jadx_server()
 ...
 async with get_agent(JADX_APP_METADATA, AppMetadata, [server], model_name=model_name) as j_agent:
     j_meta = await j_agent.run("Extract app metadata from the currently open Jadx project.")
-app: AppMetadata = j_meta.output   
+appMetadata: AppMetadata = j_meta.output   
 ...
 \end{lstlisting}
 
-\begin{lstlisting}[language=Python, caption={Use of MCP}, label={lst:useJadxMCP}] 
-kill_jadx()  # kill previous instance (if any)
-start_jadx_gui(str(apk))
-# Extract metadata via Jadx MCP
+\paragraph{\texttt{jadx-ai-mcp} tools.}
+The \gls{mcp} server exposes a set of structured tools that allow the agent to query, explore, and manipulate the currently opened Jadx project.  
+The tools provaided are:
+\begin{myitemize}
+  \item \texttt{get\_android\_manifest}, \texttt{get\_main\_activity\_class}, \\\texttt{get\_main\_application\_classes\_names}/\texttt{\_code}: recover app entry points and context.
+  \item \texttt{get\_all\_classes}, \texttt{get\_class\_source}, \texttt{get\_methods\_of\_class}, \texttt{get\_method\_by\_name}: class/method discovery and source retrieval.
+  \item \texttt{search\_method\_by\_name}, \texttt{get\_smali\_of\_class}: locate JNI bridges and low-level details.
+  \item \texttt{get\_all\_resource\_file\_names}, \texttt{get\_resource\_file}, \texttt{get\_strings}: resource inspection for configuration-driven behaviours.
+  \item \texttt{fetch\_current\_class}, \texttt{get\_selected\_text}: GUI-assisted context capture during investigations.
+  \item \texttt{rename\_class}/\texttt{rename\_method}/\texttt{rename\_field}: optional refactoring to improve readability (kept out of formal evidence).
+\end{myitemize}
 
-try:
-    appMetadata = asyncio.run(get_jadx_metadata(model_name=args.model_name, verbose=args.verbose, debug=args.debug))      
-except Exception as e:
-    handle_model_errors(e)
+\subsubsection{Ghidra}
+The integration of Ghidra into the pipeline relies on the \texttt{GhidraMCP}\footnote{\url{https://github.com/LaurieWired/GhidraMCP}}, which exposes Ghidra’s analysis and decompilation capabilities through the \gls{mcp} protocol. Listing~\ref{lst:ghidraServer} shows how the \gls{mcp} connection is established using the \texttt{MCPServerStdio} interface.
+
+\begin{lstlisting}[language=pyMCP, caption={Function \texttt{make\_ghidra\_server} used to initialise the Ghidra MCP connection}, label={lst:ghidraServer}]
+def make_ghidra_server(debug: bool = False, verbose: bool = False, timeout: int = 120) -> MCPServerStdio:
+    ghidra_mcp_dir = os.getenv("GHIDRA_MCP_DIR")
+    ghidra_dir = os.getenv("GHIDRA_INSTALL_DIR")
+        
+    return MCPServerStdio(
+        "python3",
+        args=[
+            f"{ghidra_mcp_dir}/bridge_mcp_ghidra.py",
+            "--ghidra-server", "http://127.0.0.1:8080/",
+        ],
+        env={"GHIDRA_INSTALL_DIR": ghidra_dir},
+        timeout=timeout,
+    )
+\end{lstlisting}
+
+Unlike Jadx, Ghidra does not natively support project creation and binary import directly from the terminal, which complicates its automation.  
+To overcome this limitation, the pipeline employs \texttt{ghidra-cli}\footnote{\url{https://github.com/Denloob/ghidra-cli}}, a command-line utility that allows project creation and binary import using simple commands such as: \verb|ghidra-cli -n -i ./|
+This command launches the Ghidra \gls{gui} (Figure~\ref{fig:ghidraGUI}) and automatically imports the specified ELF binaries (\texttt{.so} files extracted from the target \gls{apk}) into a new project.  
+However, the Ghidra \gls{mcp} server becomes available only after the binary is opened in the CodeBrowser (the main Ghidra interface, represented by the dragon icon), and this selection cannot be made through the command line.
+
+To fully automate this step, the helper module \texttt{ghidraMCP\_helper\_functions.py} was developed.  
+This module uses \texttt{wmctrl} to manage desktop windows and \texttt{pyautogui} to simulate keyboard input (e.g., \texttt{Tab}, \texttt{Down Arrow}, and \texttt{Enter}) to select and open the imported file within the GUI automatically.
+
+%The integration of Ghidra into the pipeline relies on the \texttt{GhidraMCP}\footnote{\url{https://github.com/LaurieWired/GhidraMCP}}, which exposes Ghidra’s analysis and decompilation capabilities through the \gls{mcp} protocol.  
+%Unlike Jadx, Ghidra doesn't supports the start and import of new projects in an easy way from therminal, it have some issues, a work around was to use \texttt{ghidra-cli}\footnote{\url{https://github.com/Denloob/ghidra-cli}}, That allows to easily create new project and import binary using \gls{cli}, by using the command \verb|ghidra-cli -n -i ./my_binary|, this start the Ghidra \gls{gui} (Figure~\ref{fig:ghidraGUI}), importing the ELF binaries (\texttt{.so} files extracted from the target \gls{apk}) in a random name project, the problem for here is that there isn't a cli way to select the imported file, and the Ghidra \gls{mcp} starts only when the binary is launched with che Ghidra's CodeBrowser (the dragon Icon). To Automate this operation \texttt{ghidraMCP\_helper\_functions.py} was developed, this helper modul use \texttt{wmctrl} to switch pc windows and \texttt{pyautogui} to send keyboard signal, as `tab`, `down arrow` and `enter` to select the file automaticly from cli.
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=12cm]{figures/GhidraGUI.jpeg}
+    \caption{Ghidra GUI after being launched via \texttt{ghidra-cli}.}
+    \label{fig:ghidraGUI}
+\end{figure}
+
+Session management is entirely handled within \texttt{ghidraMCP\_helper\_functions.py}, which provides utilities to launch, monitor, and close Ghidra processes.  
+The function \texttt{openGhidraGUI()} invokes \texttt{ghidra-cli} to initialise the environment, ensures no other active Ghidra instances are running, and confirms successful startup through window detection.  
+If a window titled “Ghidra:” is already open, it is automatically closed before the new session begins.  
+The helper then brings the GUI to the foreground and completes the import process through simulated keyboard input.  
+A built-in timeout ensures that the Ghidra environment is properly initialised before the analysis continues.
+
+
+Once the \gls{gui} environment is ready, the triage agent establishes communication with the Ghidra MCP server through the \texttt{make\_ghidra\_server()} function defined in \texttt{ghidraMCP.py}.  
+Listing~\ref{lst:ghidraServer}
+
+\begin{lstlisting}[language=pyMCP, caption={Function \texttt{make\_ghidra\_server} used to initialise the Ghidra MCP connection}, label={lst:ghidraServer}]
+def make_ghidra_server(debug: bool = False, verbose: bool = False, timeout: int = 120) -> MCPServerStdio:
+    ghidra_mcp_dir = os.getenv("GHIDRA_MCP_DIR")
+    ghidra_dir = os.getenv("GHIDRA_INSTALL_DIR")
+        
+    return MCPServerStdio(
+        "python3",
+        args=[
+            f"{ghidra_mcp_dir}/bridge_mcp_ghidra.py",
+            "--ghidra-server", "http://127.0.0.1:8080/",
+        ],
+        env={"GHIDRA_INSTALL_DIR": ghidra_dir},
+        timeout=timeout,
+    )
+\end{lstlisting}
+
+Listing~\ref{lst:mcpVulnAssessment} shows the use of \texttt{GhidraMCP} for perform vulnerability triage process. 
+
+\paragraph{\texttt{GhidraMCP} tools.}
+The Ghidra MCP server exposes a variety of analysis and decompilation tools accessible to the triage agent through structured \gls{mcp} calls.  
+The main capabilities exposed through the server are:
+
+\begin{myitemize}
+  \item \textbf{Decompilation and Disassembly:}  
+  \texttt{disassemble\_function} (return: assembly text).
+  \texttt{decompile\_function}, \texttt{decompile\_function\_by\_address} (return: C code);  
+  
+  \item \textbf{Function and Address Queries:}  
+  \texttt{get\_current\_address}, \texttt{get\_current\_function},  
+  \texttt{get\_function\_by\_address} (return: name/object),  
+  \texttt{get\_function\_xrefs}, \\ \texttt{get\_xrefs\_from}, \texttt{get\_xrefs\_to} (return: reference lists).
+  
+  \item \textbf{Listing and Enumeration:}  
+  \texttt{list\_functions}, \texttt{list\_methods}, \texttt{list\_classes}, \\
+  \texttt{list\_namespaces}, \texttt{list\_segments}, \texttt{list\_data\_items},  \texttt{list\_imports},  \\ 
+  \texttt{list\_exports},  \texttt{list\_strings} (return: lists of names, symbols, or values).
+  
+  \item \textbf{Search and Cross-References:}  
+  \texttt{search\_functions\_by\_name} (substring search),  \\
+  \texttt{get\_function\_xrefs}, \texttt{get\_xrefs\_from}, \\
+  \texttt{get\_xrefs\_to} (return: reference objects).
+  
+  \item \textbf{Editing and Annotation:}  \texttt{rename\_function\_by\_address}, \texttt{rename\_function}, \\
+  \texttt{set\_function\_prototype}, \texttt{set\_local\_variable\_type},  \texttt{rename\_variable}, \\
+\texttt{rename\_data},  \texttt{set\_decompiler\_comment}, \texttt{set\_disassembly\_comment} (return: flag or void).
+\end{myitemize}
+
+
+
+
+
+
+
+
+
+
+
+
+%\subsubsection{Ghidra}
+%For integrate Ghidra in the tool was use \texttt{jadx-ai-mcp}\footnote{https://github.com/LaurieWired/GhidraMCP}
+
+% \subsection{Use of Pydantic}
+
+\section{POIROT's output and use}
+
+\begin{figure}
+    \centering
+    \scalebox{0.8}{\input{tikzpicture/targetAPKS}}
+    \caption{POIROT's output}
+    \label{fig:poirot_output}
+\end{figure}
+
+\textcolor{red}{Passare direttamente la cartella target\_APK, opzionale è un file .txt che contiene pkgnames, che suppora anche i commenti con \#}
+
+\subsection{Extraction of .so files}
+
+
+\section{Triaging of Vulnerabilities}
+Listing~\ref{lst:mcpVulnAssessment} shows the asynchronous routine responsible for coordinating the vulnerability triage process. 
+It initialises both Jadx and Ghidra \glspl{mcp}, launches the corresponding GUI sessions, and iteratively sends each crash report to the analysis agent for structured assessment.
+
+\begin{lstlisting}[language=Python, caption={Asynchronous function \texttt{mcp\_vuln\_assessment} performing the vulnerability triage through Jadx and Ghidra MCP servers}, label={lst:mcpVulnAssessment}]
+async def mcp_vuln_assessment(
+    model_name: str,
+    crashes: Crashes,
+    relevant_libs_map: Dict[Path, List[str]],
+    timeout: int = 60,
+    verbose: bool = False,
+    debug: bool = False
+) -> AnalysisResults:
+
+    ghidra_server = make_ghidra_server(timeout=timeout)
+    jadx_server = make_jadx_server(timeout=timeout)
+
+    results = AnalysisResults()
+
+    ...
+    
+    openGhidraGUI(sorted_libs, debug=debug)
+    openGhidraFile(sorted_libs, sorted_libs[0], debug=debug)
+        
+    for i, crash in enumerate(crashes, start=1):
+        ...
+        query = (
+            f"Assess the following crash and provide a vulnerability assessment "
+            f"in the specified format.\n{str(crash)}\n"
+            f"This is a map where each key is a Path to a relevant .so library, "
+            f"and the value is the list of JNI methods it implements:\n{libs_map}"
+        )
+        
+        async with get_agent(
+            ASSESSMENT_SYSTEM_PROMPT,
+            VulnAssessment,
+            [jadx_server, ghidra_server],
+            model_name=model_name,
+        ) as agent:
+            resp = await agent.run(query)
+        vuln = resp.output
+
+        results.append(AnalysisResult(crash=crash, assessment=vuln))
+    
+    ...
+
+    closeGhidraGUI(debug=debug)
+
+    return results
 \end{lstlisting}
 
 
 
-\subsubsection{Ghidra}
-For integrate Ghidra in the tool was use \texttt{jadx-ai-mcp}\footnote{https://github.com/LaurieWired/GhidraMCP}
-
-\subsection{Use of Pydantic}
-
-\section{POIROT's output and use}
-
-\textcolor{red}{Passare direttamente la cartella target\_APK, opzionale è un file .txt che contiene pkgnames, che suppora anche i commenti con \#}
-
-\section{Triaging of Vulnerabilities}
-\subsection{APK metadata extraction}
-\subsection{Extraction of .so files}
 \section{JSON Output}
 
