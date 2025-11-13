@@ -6,3 +6,71 @@
 \textcolor{red}{ricerca tramite indirizzo, avvolte più funzioni con lo stesso nome}
 
 design si riferisce alla fase di modellazione. Nel tuo caso, può essere la pipeline/il workflow che andrai a definire per interrogare gli LLM. Non so se i prompt vadano in design  o implementation, poi vedremo...forse, implementation la toglieremo del tutto
+
+\section{Prompts}
+\textcolor{red}{Forse vanno in implementation}
+
+\url{https://www.promptingguide.ai/techniques} \\
+
+Meta Prompting – Si danno istruzioni su come il modello deve ragionare o comportarsi (prompt sul prompt).
+Retrieval Augmented Generation (RAG) – Il modello recupera informazioni da fonti esterne prima di generare la risposta.
+Automatic Reasoning and Tool-use – Il modello decide da solo quando usare strumenti esterni (codice, ricerche, calcoli).
+
+\subsection{System Prompt}
+
+Il tuo DETECTION\_SYSTEM\_PROMPT è un meta-prompt enorme:
+definisce cosa deve fare il modello \\
+come deve ragionare\\
+quali strumenti usare (MCP Jadx, MCP Ghidra) \\
+quali regole seguire\\
+quali formati produrre\\
+come valutare confidenza, severità, CWE\\
+cosa non inventare\\
+schema JSON da rispettare\\
+checklist di analisi\\
+
+Questa è esattamente la definizione di meta prompting: un prompt che definisce il comportamento cognitivo del modello.
+
+\subsection{User Prompt}
+
+\section*{Prompt Engineering Techniques Employed}
+
+You are using multiple prompt-engineering techniques simultaneously. The primary technique is clearly defined as follows.
+
+\subsection*{Primary Technique: Meta Prompting}
+Your \texttt{DETECTION\_SYSTEM\_PROMPT} acts as a \emph{meta-prompt}: it specifies \emph{what} the model must do, \emph{how} it must reason, which tools to use (e.g.\ MCP Jadx, MCP Ghidra), which rules to follow, what format to produce, how to assess confidence, severity, CWE, what not to invent, a JSON schema to respect, and a checklist of analysis steps. This is precisely the definition of \emph{meta prompting}—a prompt that defines the cognitive behaviour of the model.
+
+\subsection*{Additional Techniques Present}
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Program-Aided Language Models (PAL) / Automatic Tool-Use}: the model uses external tools via MCP, such as \texttt{search\_functions\_by\_name}, \texttt{decompile\_function}, \texttt{jadx} queries. This corresponds to automatic tool-use or PAL/ReAct style integration.
+  \item \textbf{ReAct (Reason + Act)}: the system is designed to reason (analyse crashes, perform taint reasoning) and act (invoke tools via MCP). This matches the ReAct pattern of alternating reasoning and external action.
+  \item \textbf{Chain-of-Thought (implicit)}: the prompt provides a sequential checklist of reasoning steps (1. correlate crash ↔ code; 2. backward reasoning; 3. validation; 4. reachability; 5. classification; 6. confidence). This forces a chain-of-thought style reasoning, even if not explicitly asked to output each thought.
+  \item \textbf{Prompt Chaining}: the complete pipeline involves initialisation with the system prompt, then for each crash a separate prompt, tool reads, new context, new analysis — representing sequential prompts where one output becomes input to the next.
+  \item \textbf{Self-Consistency (light version)}: you configured \texttt{retries=4} and \texttt{output\_retries=4}, which forces the model to generate multiple attempts and select a valid one. This is a form of self-consistency.
+  \item \textbf{Structured Output / Constrained Decoding}: you enforce output in a JSON structure following a Pydantic schema. This is a modern form of constrained prompting.
+\end{itemize}
+
+\subsection*{Techniques \emph{Not} Used}
+\begin{itemize}[leftmargin=2em]
+  \item Few-shot prompting (no real examples were given, only an instruction schema).
+  \item Zero-shot prompting (this is not zero-shot, since detailed instructions are provided).
+  \item Tree of Thoughts.
+  \item Retrieval Augmented Generation (no external retrieval from a knowledge base).
+  \item Automatic prompt engineering or Active Prompt.
+  \item Multimodal Chain-of-Thought.
+  \item Graph Prompting.
+\end{itemize}
+
+\subsection*{Summary}
+Your pipeline primarily employs:
+\begin{itemize}
+  \item \textbf{Meta Prompting}
+  \item \textbf{Program-Aided Language Models / Tool-Use (PAL)}
+  \item \textbf{ReAct (reason + act)}
+  \item \textbf{Implicit Chain-of-Thought via checklist}
+  \item \textbf{Prompt Chaining}
+  \item \textbf{Self-Consistency (retry-based)}
+  \item \textbf{Structured Output Constraints}
+\end{itemize}
+
+If you wish, I can generate a formal table or a version suitable for inclusion in your thesis that describes in academic style the techniques you have adopted.

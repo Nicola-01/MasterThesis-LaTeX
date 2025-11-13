@@ -1,34 +1,40 @@
 \chapter{Evaluation}
 \label{chp:eval}
 
-\section{Eperimental Setup}
+\section{Experimental Setup}
 
-The tool evaluation was made on a local machine, setupping the enviroment throw the docker explained in Chapter~\ref{chp:docker}
-The enviroment had this setpu:
-Local Machine with Ubuntu 25.04
-Docker with Ubuntu 24.04
-ghidra\_11.4.2 (last version so far)
-jadx-1.5.3 (last version so far)
-GhidraMCP 1.4  (last version so far)
-jadx-ai-mcp 4.0.0 (last version so far)
+The evaluation of the tool was performed on a local machine, using the Docker-based environment described in Chapter~\ref{chp:docker}.  
+The environment consisted of:
+
+\begin{itemize}
+    \item Local machine running \textbf{Ubuntu 25.04};
+    \item Docker container based on \textbf{Ubuntu 24.04};
+    \item \textbf{Ghidra~11.4.2} (latest version at the time of evaluation);
+    \item \textbf{Jadx~1.5.3} (latest version at the time of evaluation);
+    \item \textbf{GhidraMCP~1.4} (latest version at the time of evaluation);
+    \item \textbf{jadx-ai-mcp~4.0.0} (latest version at the time of evaluation).
+\end{itemize}
 
 \subsection{AWS for POIROT}
-The extraction of the crash can be see in Chapter~\ref{chp:preliminaries} and the enviroment used was mention in chapter~\ref{chp:preliminaries_env}
 
-\subsection{LLM used}
-The evaluation was made with the model \textcolor{red}{OpenAI GPT-5}
+The extraction of crashes used for this evaluation is described in Chapter~\ref{chp:preliminaries}, and the corresponding execution environment is detailed in Chapter~\ref{chp:preliminaries_env}.  
+All POIROT runs were executed on an AWS EC2 instance configured for large-scale fuzzing.
+
+\subsection{LLM Used}
+
+The evaluation was conducted using the model \textcolor{red}{OpenAI GPT-5}.
 
 \section{Test Applications}
 
-The Table~\ref{tab:apps} shows the applications used and the relative version that was used to evaluate the tool
+Table~\ref{tab:apps} lists the applications used for the evaluation, together with the exact versions of each APK.  
+These apps were selected from the POIROT corpus and represent a mixture of media, banking, utilities, games, and communication applications.
 
 \begin{table}[ht]
 \centering
-\resizebox{1\textwidth}{!}{ % scale the table to 80% of the text width
+\resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l||l|l|}
 \hline
-\multicolumn{4}{|c|}{\textbf{Applications List}} \\
-
+\multicolumn{4}{|c|}{\textbf{Applications Used for Evaluation}} \\
 \hline
 \textbf{App} & \textbf{Version} & \textbf{App} & \textbf{Version} \\
 \hline
@@ -56,24 +62,21 @@ tw.com.taishinbank.ccapp & 5.631 & tw.gov.tra.twtraffic & 2.1.2 \\
 \hline
 \end{tabular}
 }
-\caption{List of applications and their versions}
+\caption{Applications evaluated by the triage system.}
 \label{tab:apps}
 \end{table}
 
-%\section{Reproduce POIROT output}
-%\section{myTool execution}
-\subsection{Time of execution}
+\section{Execution Time}
 
-The Table~\ref{tab:apps_time} shows..
-
-[Specify that the timing of each applications depends of the number of crashes]
+Table~\ref{tab:apps_time} reports the execution time for each application.  
+The total time per APK depends primarily on the \emph{number of crashes} produced by POIROT, as well as the number of relevant libraries and the complexity of the stack trace.
 
 \begin{table}[ht]
 \centering
-\resizebox{1\textwidth}{!}{ % scale the table to 100% of the text width
+\resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l||l|l|}
 \hline
-\multicolumn{4}{|c|}{\textbf{Applications List}} \\
+\multicolumn{4}{|c|}{\textbf{Execution Time per Application}} \\
 \hline
 \textbf{App} & \textbf{Time (s)} & \textbf{App} & \textbf{Time (s)} \\
 \hline
@@ -100,28 +103,40 @@ nh.smart.nhcok & TIME & ragazzo.alphacode.com.br & TIME \\
 tw.com.taishinbank.ccapp & TIME & tw.gov.tra.twtraffic & TIME \\
 \hline
 \hline
-\multicolumn{2}{|r|}{\textbf{Average Time}} & \multicolumn{2}{|l|}{\textbf{AVG}} \\
+\multicolumn{2}{|r|}{\textbf{Average Time}} & \multicolumn{2}{l|}{\textbf{AVG}} \\
 \hline
 \end{tabular}
 }
-\caption{List of applications and their times}
+\caption{Approximate execution time per application.}
 \label{tab:apps_time}
 \end{table}
 
-\subsection{LLM usage}
+\section{\gls{llm} Usage}
 
-[Fast desctiption of what the tokens are in the llm API usage]
+\glspl{llm}, when accessed through their cloud \glspl{api}, compute usage costs based on the number of \emph{input tokens} (the prompt sent to the model) and \emph{output tokens} (the generated response).  
+Token consumption plays a central role in both performance and cost, and is influenced by several factors:
 
-The Table~\ref{tab:apps_tokens} shows.. tokens usage, Input tokens and output tokens
+
+Token usage depends mainly on:
+
+\begin{itemize}
+    \item The prompt used, including both the system prompt and the user prompt;
+    \item The number of crashes found by POIROT;
+    \item The amount of decompiled code retrieved from Ghidra, which depends on the depth of the crash stack trace;
+    \item The verbosity and structure of the triage explanation produced by the \gls{llm}.
+\end{itemize}
+
+Table~\ref{tab:apps_tokens} reports input and output token usage for each application.
 
 \begin{table}[ht]
 \centering
-\resizebox{1\textwidth}{!}{ % scale the table to 100% of the text width
+\resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l|l||l|l|l|}
 \hline
-\multicolumn{6}{|c|}{\textbf{Applications List}} \\
+\multicolumn{6}{|c|}{\textbf{Token Usage per Application}} \\
 \hline
-\textbf{App} & \textbf{Input} & \textbf{Output} & \textbf{App} & \textbf{Input} & \textbf{Output} \\
+\textbf{App} & \textbf{Input} & \textbf{Output} &
+\textbf{App} & \textbf{Input} & \textbf{Output} \\
 \hline
 br.com.pedidos10 & NTokens & NTokens & ca.radioplayer.android & NTokens & NTokens \\
 com.ahnlab.v3mobileplus & NTokens & NTokens & com.appgeneration.itunerfree & NTokens & NTokens \\
@@ -146,11 +161,25 @@ nh.smart.nhcok & NTokens & NTokens & ragazzo.alphacode.com.br & NTokens & NToken
 tw.com.taishinbank.ccapp & NTokens & NTokens & tw.gov.tra.twtraffic & NTokens & NTokens \\
 \hline
 \hline
-\multicolumn{3}{|r|}{\textbf{Average Input Tokens}} & \multicolumn{3}{|l|}{\textbf{AVG}} \\
-\multicolumn{3}{|r|}{\textbf{Average Output Tokens}} & \multicolumn{3}{|l|}{\textbf{AVG}} \\
+\multicolumn{3}{|r|}{\textbf{Average Input Tokens}} &
+\multicolumn{3}{l|}{\textbf{AVG}} \\
+\multicolumn{3}{|r|}{\textbf{Average Output Tokens}} &
+\multicolumn{3}{l|}{\textbf{AVG}} \\
 \hline
 \end{tabular}
 }
-\caption{List of applications and their times}
-\label{tab:apps_time}
+\caption{Input and output token usage per application.}
+\label{tab:apps_tokens}
 \end{table}
+
+\subsubsection{Evaluation Metrics}
+
+\textcolor{red}{DA VEDERE}
+
+For the evaluation, the F1-score was selected as the primary metric. This measure is commonly employed in classification settings because it offers a single value that reflects the trade-off between precision and recall, which is especially important when the distribution of classes is unbalanced or when both false positives and false negatives carry comparable weight. The F1-score is defined as:
+\[
+\mathrm{F1} = 2 \cdot \frac{\text{precision} \cdot \text{recall}}{\text{precision} + \text{recall}}
+\]
+
+Precision quantifies the proportion of correctly identified positive cases among all cases predicted as positive, whereas recall quantifies the proportion of actual positive cases that were successfully detected.  
+The F1-score combines these two aspects through their harmonic mean, ensuring a lower score when precision and recall diverge significantly, even if one of the two is high.
