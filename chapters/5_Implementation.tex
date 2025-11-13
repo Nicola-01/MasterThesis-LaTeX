@@ -382,13 +382,68 @@ The triage tool uses a preference list of \glspl{abi} to select the variant to a
 Using the function \texttt{find\_relevant\_libs(..)}, the program enumerates for each library the available functions via the Unix command \texttt{nm}, a utility that ``dumps the symbol table and its attributes from a binary executable file (including libraries, compiled object modules, shared-object files)''.  
 The resulting symbol list is then correlated with the stack trace contained in \texttt{folder2backtraces.txt} so that only the relevant \texttt{.so} files are selected for triage, thereby avoiding the overload of passing too many unused libraries to the model for analysis.
 
-\section{JSON Output}
+\section{Output}
+
+The final result of the triage pipeline is an easily readable and structured format that facilitates understanding of the error and the potential vulnerability.  
+
+The tool leverages different models inheriting from \texttt{BaseModel}\footnote{\url{https://docs.pydantic.dev/latest/api/base_model/}} (from Pydantic). One of the primary ways to define a schema in Pydantic is via models: classes inheriting from \texttt{BaseModel} that define annotated attributes. :contentReference[oaicite:1]{index=1}  
+Models can be thought of as similar to structs in languages like C, or as the schema for a single API endpoint. :contentReference[oaicite:2]{index=2}  
+Unlike standard dataclasses, Pydantic models include built-in validation, serialization, and JSON schema generation. This allows the system to enforce that the \gls{llm} returns responses conforming to a specified structure and type range.
+
+Using these models allows the pipeline to define a specific output format with explicit fields and types, and rely on Pydantic to enforce compliance with these constraints.
+
+Listing~\ref{lst:AppMetadata} shows an example of a \texttt{BaseModel} element, namely \texttt{AppMetadata}. It stores metadata about an Android app (extracted via Jadx). The method \_\_str\_\_(..) enables easy display in the CLI when the \texttt{--verbose} option is used, and \texttt{to\_json} converts the model into a JSON string.
+
+
+\begin{lstlisting}[language=Python, caption={Example of the \texttt{AppMetadata} model class}, label={lst:AppMetadata}]
+class AppMetadata(BaseModel):
+    app_name: str
+    package: str
+    min_sdk: Optional[int] = None
+    target_sdk: Optional[int] = None
+    version_name: Optional[str] = None
+    version_code: Optional[str] = None
+    
+    def __str__(self) -> str:
+        fields = [
+            f"App Name     : {self.app_name}",
+            f"Package      : {self.package}",
+            f"Min SDK      : {self.min_sdk or 'N/A'}",
+            f"Target SDK   : {self.target_sdk or 'N/A'}",
+            f"Version Name : {self.version_name or 'N/A'}",
+            f"Version Code : {self.version_code or 'N/A'}"
+        ]
+        return "AppMetadata : \n" + "\n".join(fields)
+    
+    def to_json(self, *, indent: int = 2, exclude_none: bool = True, ensure_ascii: bool = False, ) -> str:
+        data = self.model_dump(exclude_none=exclude_none)
+        return json.dumps(data, indent=indent, ensure_ascii=ensure_ascii)
+\end{lstlisting}
+
+Some of the principal \texttt{BaseModel} classes used in the pipeline include:
+\begin{itemize}
+    \item \texttt{ToolInfo}: Information about the tool and environment used for the detection.
+    \item \texttt{AppMetadata}: Metadata about an Android app extracted from Jadx.
+    \item \texttt{AnalysisBlock}: Contains the full analysis context, including \texttt{ToolInfo}, \texttt{AppMetadata}, and \texttt{AnalysisResults}.
+    \item \texttt{VulnDetection}: Result of a vulnerability assessment for a single crash.
+    \item \texttt{AnalysisResult}: Combines a \texttt{CrashSummary} with its corresponding \texttt{VulnDetection}.
+\end{itemize}
+
+The use of \texttt{BaseModel} ensures both the validation of outputs returned by the \gls{llm} and straightforward conversion to a standard JSON format.
+
+\subsection{JSON Output}
+
+Listing~\ref{lst:jsonOutput} shows how the json looks like. \textcolor{red}{TO FIX}
+
+
+
+
 
 \section{How to use}
 This section describes the complete workflow for running the triage pipeline—from preparing the POIROT output and configuring the environment, to launching the program and interpreting the generated results.
 
 
-\subsection{Docker}
+\subsection{Docker}\label{chp:docker}
 
 This project adopted Docker to encapsulate the entire triage system and its dependencies in a reproducible and portable image. Docker is an open-source platform designed to automate the deployment of applications within lightweight, isolated environments known as \emph{containers}. Each container bundles an application together with its dependencies, configuration files and operating system libraries, ensuring consistent behaviour across different environments. 
 

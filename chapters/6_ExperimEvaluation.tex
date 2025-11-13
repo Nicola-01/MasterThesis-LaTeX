@@ -2,12 +2,155 @@
 \label{chp:eval}
 
 \section{Eperimental Setup}
+
+The tool evaluation was made on a local machine, setupping the enviroment throw the docker explained in Chapter~\ref{chp:docker}
+The enviroment had this setpu:
+Local Machine with Ubuntu 25.04
+Docker with Ubuntu 24.04
+ghidra\_11.4.2 (last version so far)
+jadx-1.5.3 (last version so far)
+GhidraMCP 1.4  (last version so far)
+jadx-ai-mcp 4.0.0 (last version so far)
+
 \subsection{AWS for POIROT}
-\subsection{Local setup}
+The extraction of the crash can be see in Chapter~\ref{chp:preliminaries} and the enviroment used was mention in chapter~\ref{chp:preliminaries_env}
+
 \subsection{LLM used}
+The evaluation was made with the model \textcolor{red}{OpenAI GPT-5}
 
 \section{Test Applications}
-\section{Reproduce POIROT output}
-\section{myTool execution}
+
+The Table~\ref{tab:apps} shows the applications used and the relative version that was used to evaluate the tool
+
+\begin{table}[ht]
+\centering
+\resizebox{1\textwidth}{!}{ % scale the table to 80% of the text width
+\begin{tabular}{|l|l||l|l|}
+\hline
+\multicolumn{4}{|c|}{\textbf{Applications List}} \\
+
+\hline
+\textbf{App} & \textbf{Version} & \textbf{App} & \textbf{Version} \\
+\hline
+br.com.pedidos10 & 1.16.4 & ca.radioplayer.android & 6.3.420.1 \\
+com.ahnlab.v3mobileplus & 2.5.20.10 & com.appgeneration.itunerfree & 9.3.13 \\
+com.cisco.webex.meetings & 45.3.0 & com.clearchannel.iheartradio.controller & 10.36.0 \\
+com.ford.fordpasseu & 4.23.1 & com.hyundaicard.cultureapp & 1.0.72 \\
+com.intsig.BCRLite & 7.85.5 & com.jeju.genie & 2.2.13 \\
+com.kbstar.kbbridge & 1.2.1 & com.kt.ktauth & 02.01.37 \\
+com.lottemembers.android & 7.7.5 & com.more.dayzsurvival.gp & 25.1002.1 \\
+com.pandora.android & 2509.1 & com.rockbite.deeptown & 6.2.10 \\
+com.rstgames.durak & 1.9.11 & com.samsungcard.shopping & 1.4.901 \\
+com.skmc.okcashbag.home\_google & 7.0.8 & com.skt.prod.dialer & 13.6.5 \\
+com.skt.smartbill & 6.4.1 & com.sopheos.videgreniersmobile & 20.11.10 \\
+com.ssg.serviceapp.android.egiftcertificate & 2.6.10 & com.teamjin.deliveryk & 7.0.3 \\
+com.tencent.mm & 8.0.28 & com.tplink.skylight & 3.1.20 \\
+fr.radioplayer.android & 6.6.420.1 & kr.co.busanbank.mbp & 3.0.10 \\
+kr.co.morpheus.geps & 02.42 & kr.co.samsungcard.mpocket & 5.4.306 \\
+kr.go.iros & 1.2.3 & kr.go.kcs.mobile.pubservice & 1.0.281 \\
+kr.go.minwon.m & 2.5.95 & kr.go.nts.android & 12.8 \\
+kr.go.wetax.android & 5.4.14 & nh.smart.allonebank & 1.8.8 \\
+nh.smart.banking & 4.1.2 & nh.smart.card & 6.5.0 \\
+nh.smart.nhcok & 2.0.70 & ragazzo.alphacode.com.br & 3.0.9 \\
+tw.com.taishinbank.ccapp & 5.631 & tw.gov.tra.twtraffic & 2.1.2 \\
+\hline
+\end{tabular}
+}
+\caption{List of applications and their versions}
+\label{tab:apps}
+\end{table}
+
+%\section{Reproduce POIROT output}
+%\section{myTool execution}
 \subsection{Time of execution}
+
+The Table~\ref{tab:apps_time} shows..
+
+[Specify that the timing of each applications depends of the number of crashes]
+
+\begin{table}[ht]
+\centering
+\resizebox{1\textwidth}{!}{ % scale the table to 100% of the text width
+\begin{tabular}{|l|l||l|l|}
+\hline
+\multicolumn{4}{|c|}{\textbf{Applications List}} \\
+\hline
+\textbf{App} & \textbf{Time (s)} & \textbf{App} & \textbf{Time (s)} \\
+\hline
+br.com.pedidos10 & TIME & ca.radioplayer.android & TIME \\
+com.ahnlab.v3mobileplus & TIME & com.appgeneration.itunerfree & TIME \\
+com.cisco.webex.meetings & TIME & com.clearchannel.iheartradio.controller & TIME \\
+com.ford.fordpasseu & TIME & com.hyundaicard.cultureapp & TIME \\
+com.intsig.BCRLite & TIME & com.jeju.genie & TIME \\
+com.kbstar.kbbridge & TIME & com.kt.ktauth & TIME \\
+com.lottemembers.android & TIME & com.more.dayzsurvival.gp & TIME \\
+com.pandora.android & TIME & com.rockbite.deeptown & TIME \\
+com.rstgames.durak & TIME & com.samsungcard.shopping & TIME \\
+com.skmc.okcashbag.home\_google & TIME & com.skt.prod.dialer & TIME \\
+com.skt.smartbill & TIME & com.sopheos.videgreniersmobile & TIME \\
+com.ssg.serviceapp.android.egiftcertificate & TIME & com.teamjin.deliveryk & TIME \\
+com.tencent.mm & TIME & com.tplink.skylight & TIME \\
+fr.radioplayer.android & TIME & kr.co.busanbank.mbp & TIME \\
+kr.co.morpheus.geps & TIME & kr.co.samsungcard.mpocket & TIME \\
+kr.go.iros & TIME & kr.go.kcs.mobile.pubservice & TIME \\
+kr.go.minwon.m & TIME & kr.go.nts.android & TIME \\
+kr.go.wetax.android & TIME & nh.smart.allonebank & TIME \\
+nh.smart.banking & TIME & nh.smart.card & TIME \\
+nh.smart.nhcok & TIME & ragazzo.alphacode.com.br & TIME \\
+tw.com.taishinbank.ccapp & TIME & tw.gov.tra.twtraffic & TIME \\
+\hline
+\hline
+\multicolumn{2}{|r|}{\textbf{Average Time}} & \multicolumn{2}{|l|}{\textbf{AVG}} \\
+\hline
+\end{tabular}
+}
+\caption{List of applications and their times}
+\label{tab:apps_time}
+\end{table}
+
 \subsection{LLM usage}
+
+[Fast desctiption of what the tokens are in the llm API usage]
+
+The Table~\ref{tab:apps_tokens} shows.. tokens usage, Input tokens and output tokens
+
+\begin{table}[ht]
+\centering
+\resizebox{1\textwidth}{!}{ % scale the table to 100% of the text width
+\begin{tabular}{|l|l|l||l|l|l|}
+\hline
+\multicolumn{6}{|c|}{\textbf{Applications List}} \\
+\hline
+\textbf{App} & \textbf{Input} & \textbf{Output} & \textbf{App} & \textbf{Input} & \textbf{Output} \\
+\hline
+br.com.pedidos10 & NTokens & NTokens & ca.radioplayer.android & NTokens & NTokens \\
+com.ahnlab.v3mobileplus & NTokens & NTokens & com.appgeneration.itunerfree & NTokens & NTokens \\
+com.cisco.webex.meetings & NTokens & NTokens & com.clearchannel.iheartradio.controller & NTokens & NTokens \\
+com.ford.fordpasseu & NTokens & NTokens & com.hyundaicard.cultureapp & NTokens & NTokens \\
+com.intsig.BCRLite & NTokens & NTokens & com.jeju.genie & NTokens & NTokens \\
+com.kbstar.kbbridge & NTokens & NTokens & com.kt.ktauth & NTokens & NTokens \\
+com.lottemembers.android & NTokens & NTokens & com.more.dayzsurvival.gp & NTokens & NTokens \\
+com.pandora.android & NTokens & NTokens & com.rockbite.deeptown & NTokens & NTokens \\
+com.rstgames.durak & NTokens & NTokens & com.samsungcard.shopping & NTokens & NTokens \\
+com.skmc.okcashbag.home\_google & NTokens & NTokens & com.skt.prod.dialer & NTokens & NTokens \\
+com.skt.smartbill & NTokens & NTokens & com.sopheos.videgreniersmobile & NTokens & NTokens \\
+com.ssg.serviceapp.android.egiftcertificate & NTokens & NTokens & com.teamjin.deliveryk & NTokens & NTokens \\
+com.tencent.mm & NTokens & NTokens & com.tplink.skylight & NTokens & NTokens \\
+fr.radioplayer.android & NTokens & NTokens & kr.co.busanbank.mbp & NTokens & NTokens \\
+kr.co.morpheus.geps & NTokens & NTokens & kr.co.samsungcard.mpocket & NTokens & NTokens \\
+kr.go.iros & NTokens & NTokens & kr.go.kcs.mobile.pubservice & NTokens & NTokens \\
+kr.go.minwon.m & NTokens & NTokens & kr.go.nts.android & NTokens & NTokens \\
+kr.go.wetax.android & NTokens & NTokens & nh.smart.allonebank & NTokens & NTokens \\
+nh.smart.banking & NTokens & NTokens & nh.smart.card & NTokens & NTokens \\
+nh.smart.nhcok & NTokens & NTokens & ragazzo.alphacode.com.br & NTokens & NTokens \\
+tw.com.taishinbank.ccapp & NTokens & NTokens & tw.gov.tra.twtraffic & NTokens & NTokens \\
+\hline
+\hline
+\multicolumn{3}{|r|}{\textbf{Average Input Tokens}} & \multicolumn{3}{|l|}{\textbf{AVG}} \\
+\multicolumn{3}{|r|}{\textbf{Average Output Tokens}} & \multicolumn{3}{|l|}{\textbf{AVG}} \\
+\hline
+\end{tabular}
+}
+\caption{List of applications and their times}
+\label{tab:apps_time}
+\end{table}
