@@ -85,7 +85,7 @@ Attackers often amplify impact by chaining flaws across interfaces. Many system 
 \section{Fuzzing}
 Fuzzing is an automated testing technique that repeatedly executes a target program with many inputs, either randomly generated or systematically derived, to expose defects such as crashes, assertion failures, or memory-safety violations. Modern fuzzers prioritise inputs that increase code coverage (e.g., edge or block coverage), and couple execution with hardening oracles (e.g., sanitizers) to turn latent memory errors into reliable, actionable signals \cite{sutton2007fuzzing,godefroid2008sage}.
 
-\subsection{Types}
+\subsection*{Types}
 A fuzzer can be classified along three ways:
 \begin{itemize}
   \item \textbf{Input production:} \emph{generation-based} where inputs are produced from a model or specification and \emph{mutation-based} where inputs are produced by mutating existing seeds. Coverage-guided mutation fuzzers (e.g., AFL++, libfuzzer) iteratively mutate seeds that increase coverage.
@@ -93,10 +93,10 @@ A fuzzer can be classified along three ways:
   \item \textbf{Program knowledge:} \emph{black-box}: no visibility into internals, \emph{grey-box}: lightweight instrumentation, e.g., edge coverage, and \emph{white-box}: constraint solving/symbolic execution to systematically steer execution, as in SAGE \cite{godefroid2008sage}.
 \end{itemize}
 
-\subsection{Uses}
+\subsection*{Uses}
 Fuzzing is primarily employed to discover security-relevant defects in safety- or security-critical software. Its strength lies in \emph{demonstrating the presence} of bugs via concrete, reproducible inputs. Proving correctness for all inputs requires a formal specification and formal methods; fuzzing complements, rather than replaces, such approaches \cite{sutton2007fuzzing}. In practice, fuzzing integrates into secure development lifecycles and Continuous Integration pipelines to continuously test libraries, parsers, and interfaces that process untrusted data.
 
-\subsection{Android context} %  (sanitizers as oracles).
+\subsection*{Android context} %  (sanitizers as oracles).
 On Android, fuzzing native components benefits from memory error detectors such as Hardware-assisted AddressSanitizer (HWASan) and, historically, AddressSanitizer (ASan). These sanitizers instrument code to detect out-of-bounds accesses, use-after-free, and related violations during fuzzing, producing precise diagnostics that accelerate crash triage \cite{hwasan-ndk,asan-aosp,asan-clang}.
 
 Two widely used coverage-guided engines are American Fuzzy Lop++ (AFL++) (a fork and extension of AFL with a rich ecosystem of mutators and instrumentation options) and LLVM In-Process Coverage-Guided Fuzzer (libFuzzer). Both have been successfully applied to native libraries, including on Android, to elicit high-quality crashes and to maximise coverage under realistic budgets \cite{aflpp-woot20,libfuzzer-llvm}.
