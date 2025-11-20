@@ -3,23 +3,24 @@
     folder indent=.9em, folder icons,
     edge=densely dotted}
     [AutomaticAnalysis, is root
-      [CrashSummary.py, is file]
       [evaluation.py, is file]
       [ghidraMCP\_helper\_functions.py, is file]
       [jadx\_helper\_functions.py, is file]
       [main.py, is file]
       [utils.py, is file]
-      [ghidra-cli, is file]
+      %[ghidra-cli, is file]
       [MCPs
+        [AppMetadata.py, is file]
+        [CrashSummary.py, is file]
         [geminiCLI.py, is file]
         [get\_agent.py, is file]
         [ghidraMCP.py, is file]
         [jadxMCP.py, is file]
-        [vulnAssessment.py, is file]
+        [VulnResult.py, is file]
         [prompts
-          [ghidra\_prompts.py, is file]
-          [jadx\_prompts.py, is file]
-          [vulnAssesment\_prompts.py, is file]
+          [AppMetadata\_prompt.py, is file]
+          [Shimming\_prompts.py, is file]
+          [VulnDetection\_prompt.py, is file]
         ]
       ]
 ]

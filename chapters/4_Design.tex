@@ -1,76 +1,194 @@
 \chapter{Design}
 \label{chp:design}
 
-\textcolor{red}{è Retrieval-Augmented Generation (RAG)?}
+This chapter presents the conceptual design of the automated crash triage system.  
+The goal is to define the overall workflow, the interaction model between the \gls{llm} and external tools, and the prompting strategy that enables reliable, explainable vulnerability assessments.
 
-\textcolor{red}{ricerca tramite indirizzo, avvolte più funzioni con lo stesso nome}
+The design focuses on three complementary aspects:
+\begin{enumerate}
+    \item the architecture of the triage pipeline and its information flow;
+    \item the prompting framework used to guide the \gls{llm};
+    \item the tool-orchestration layer (shimming) that enables controlled access to \gls{mcp}-exposed capabilities.
+\end{enumerate}
 
-design si riferisce alla fase di modellazione. Nel tuo caso, può essere la pipeline/il workflow che andrai a definire per interrogare gli LLM. Non so se i prompt vadano in design  o implementation, poi vedremo...forse, implementation la toglieremo del tutto
+\section{Pipeline and Workflow Design}
 
-\section{Prompts}
-\textcolor{red}{Forse vanno in implementation}
+The triage process is structured as a multi-stage pipeline in which the \gls{llm} acts as a reasoning engine, while static-analysis tools (Ghidra, Jadx) act as retrieval and inspection backends.
 
-\url{https://www.promptingguide.ai/techniques} \\
+Figure~\ref{fig:pipeline_design} illustrates the workflow:
 
-Meta Prompting – Si danno istruzioni su come il modello deve ragionare o comportarsi (prompt sul prompt).
-Retrieval Augmented Generation (RAG) – Il modello recupera informazioni da fonti esterne prima di generare la risposta.
-Automatic Reasoning and Tool-use – Il modello decide da solo quando usare strumenti esterni (codice, ricerche, calcoli).
+\begin{enumerate}
+    \item The crash reports produced by POIROT are parsed into structured \texttt{CrashSummary} objects.
+    \item Relevant native libraries are identified and loaded into Ghidra; the APK is opened in Jadx.
+    \item The \gls{llm} receives a system-level meta-prompt defining its role, objectives, rules, and output schema.
+    \item For each crash, a user prompt provides the runtime context (stack, termination reason, JNI bridge method, Java call graph).
+    \item The model decides which tool calls to execute through the \gls{mcp}, such as:
+    \begin{itemize}
+        \item locating functions (\texttt{search\_functions\_by\_name});
+        \item retrieving decompiled native code (\texttt{decompile\_function}, \texttt{disassemble\_function});
+        \item exploring Java-side call sites (\texttt{get\_android\_manifest}, \texttt{get\_class\_sources}).
+    \end{itemize}
+    \item The \gls{llm} integrates retrieved evidence and produces a final JSON vulnerability report.
+\end{enumerate}
 
-\subsection{System Prompt}
+The pipeline therefore embodies an *analysis loop*: crash context → retrieval via tools → reasoning → structured verdict.
 
-Il tuo DETECTION\_SYSTEM\_PROMPT è un meta-prompt enorme:
-definisce cosa deve fare il modello \\
-come deve ragionare\\
-quali strumenti usare (MCP Jadx, MCP Ghidra) \\
-quali regole seguire\\
-quali formati produrre\\
-come valutare confidenza, severità, CWE\\
-cosa non inventare\\
-schema JSON da rispettare\\
-checklist di analisi\\
+\section{Prompting Strategy}
 
-Questa è esattamente la definizione di meta prompting: un prompt che definisce il comportamento cognitivo del modello.
+The prompting strategy plays a pivotal role in ensuring the consistency, validity, and safety of the generated analyses.  
+Multiple established prompting techniques are employed, as categorised by the Prompt Engineering Guide\footnote{\url{https://www.promptingguide.ai/techniques}}.
 
-\subsection{User Prompt}
+\subsection{Meta Prompting (Primary Technique)}
 
-\section*{Prompt Engineering Techniques Employed}
-
-You are using multiple prompt-engineering techniques simultaneously. The primary technique is clearly defined as follows.
-
-\subsection*{Primary Technique: Meta Prompting}
-Your \texttt{DETECTION\_SYSTEM\_PROMPT} acts as a \emph{meta-prompt}: it specifies \emph{what} the model must do, \emph{how} it must reason, which tools to use (e.g.\ MCP Jadx, MCP Ghidra), which rules to follow, what format to produce, how to assess confidence, severity, CWE, what not to invent, a JSON schema to respect, and a checklist of analysis steps. This is precisely the definition of \emph{meta prompting}—a prompt that defines the cognitive behaviour of the model.
-
-\subsection*{Additional Techniques Present}
-\begin{itemize}[leftmargin=2em]
-  \item \textbf{Program-Aided Language Models (PAL) / Automatic Tool-Use}: the model uses external tools via MCP, such as \texttt{search\_functions\_by\_name}, \texttt{decompile\_function}, \texttt{jadx} queries. This corresponds to automatic tool-use or PAL/ReAct style integration.
-  \item \textbf{ReAct (Reason + Act)}: the system is designed to reason (analyse crashes, perform taint reasoning) and act (invoke tools via MCP). This matches the ReAct pattern of alternating reasoning and external action.
-  \item \textbf{Chain-of-Thought (implicit)}: the prompt provides a sequential checklist of reasoning steps (1. correlate crash ↔ code; 2. backward reasoning; 3. validation; 4. reachability; 5. classification; 6. confidence). This forces a chain-of-thought style reasoning, even if not explicitly asked to output each thought.
-  \item \textbf{Prompt Chaining}: the complete pipeline involves initialisation with the system prompt, then for each crash a separate prompt, tool reads, new context, new analysis — representing sequential prompts where one output becomes input to the next.
-  \item \textbf{Self-Consistency (light version)}: you configured \texttt{retries=4} and \texttt{output\_retries=4}, which forces the model to generate multiple attempts and select a valid one. This is a form of self-consistency.
-  \item \textbf{Structured Output / Constrained Decoding}: you enforce output in a JSON structure following a Pydantic schema. This is a modern form of constrained prompting.
-\end{itemize}
-
-\subsection*{Techniques \emph{Not} Used}
-\begin{itemize}[leftmargin=2em]
-  \item Few-shot prompting (no real examples were given, only an instruction schema).
-  \item Zero-shot prompting (this is not zero-shot, since detailed instructions are provided).
-  \item Tree of Thoughts.
-  \item Retrieval Augmented Generation (no external retrieval from a knowledge base).
-  \item Automatic prompt engineering or Active Prompt.
-  \item Multimodal Chain-of-Thought.
-  \item Graph Prompting.
-\end{itemize}
-
-\subsection*{Summary}
-Your pipeline primarily employs:
+The central system prompt (\texttt{DETECTION\_SYSTEM\_PROMPT}) acts as a \emph{meta-prompt}, as defined in the Prompt Engineering Guide.  
+It prescribes:
 \begin{itemize}
-  \item \textbf{Meta Prompting}
-  \item \textbf{Program-Aided Language Models / Tool-Use (PAL)}
-  \item \textbf{ReAct (reason + act)}
-  \item \textbf{Implicit Chain-of-Thought via checklist}
-  \item \textbf{Prompt Chaining}
-  \item \textbf{Self-Consistency (retry-based)}
-  \item \textbf{Structured Output Constraints}
+    \item the task definition (crash triage and vulnerability assessment);
+    \item constraints on the reasoning process (data-flow tracing, validation steps, reachability analysis);
+    \item which external tools may be used (MCP Jadx, MCP Ghidra);
+    \item how intermediate evidence must be interpreted;
+    \item strict output constraints (Pydantic-compliant JSON);
+    \item behaviour when information is missing (no hallucinations; explicit limitations).
 \end{itemize}
 
-If you wish, I can generate a formal table or a version suitable for inclusion in your thesis that describes in academic style the techniques you have adopted.
+This technique defines the “cognitive profile” of the model and ensures uniformity across assessments.
+
+\subsection{Tool-Augmented Reasoning (PAL / Automatic Tool Use)}
+
+The system relies on *Program-Aided Language Models (PAL)* and *Automatic Reasoning and Tool-Use*, as defined in the Prompting Guide.  
+The model:
+\begin{itemize}
+    \item determines autonomously which tool calls to issue;
+    \item retrieves code, symbols, and metadata via MCP backends;
+    \item integrates results before proceeding with reasoning.
+\end{itemize}
+
+This transforms the \gls{llm} from a text generator into an orchestrator of static-analysis queries.
+
+\subsection{ReAct: Reason + Act Loops}
+
+The design follows the ReAct paradigm:
+\begin{itemize}
+    \item \emph{Reason}: interpret stack traces, map frames to functions, identify suspicious patterns;
+    \item \emph{Act}: invoke Ghidra or Jadx tools to confirm hypotheses;
+    \item \emph{Reason}: integrate the new evidence and refine the assessment.
+\end{itemize}
+
+This is especially effective for triage, where hypotheses must be validated through code inspection.
+
+\subsection{Implicit Chain-of-Thought}
+
+While explicit chain-of-thought is not revealed in the output, the system prompt enforces a multi-step reasoning checklist:
+\begin{enumerate}
+    \item correlate runtime failure with native call site;
+    \item trace data backward through native and Java call chains;
+    \item determine whether inputs are attacker-controlled;
+    \item evaluate reachability under realistic conditions;
+    \item classify the vulnerability and assign a severity score.
+\end{enumerate}
+
+The model implicitly follows this pipeline to ensure reliable judgments.
+
+\subsection{Prompt Chaining}
+
+Each crash triggers:
+\begin{itemize}
+    \item an initial query,
+    \item one or more MCP tool calls,
+    \item a final structured verdict.
+\end{itemize}
+
+This sequential exchange mirrors the Prompt Chaining technique from the guide.
+
+\subsection{Self-Consistency (Retry-Based)}
+
+The system incorporates retry loops in the shimming layer:
+\begin{itemize}
+    \item malformed JSON → regenerate;
+    \item insufficient evidence → request additional tool calls.
+\end{itemize}
+
+This reproduces the Self-Consistency technique, increasing robustness across models.
+
+\subsection{Structured Output Constraints}
+
+The output is strictly constrained by Pydantic schemas, ensuring machine-readability and preventing hallucinated fields.
+
+\subsection{Techniques Not Used}
+
+According to the Prompting Guide:
+\begin{itemize}
+    \item \textbf{Zero-shot} and \textbf{few-shot prompting}: not used.
+    \item \textbf{Tree-of-Thought}: not used.
+    \item \textbf{Retrieval-Augmented Generation (RAG)}:  
+    \textcolor{red}{Possibile dubbio: l’uso degli MCP costituisce RAG?}  
+    Tecnicamente, RAG implica una conoscenza esterna indicizzata (KB o corpus).  
+    Qui l’LLM interroga strumenti di analisi statica, non un archivio testuale.  
+    Pertanto non è RAG nei termini classici.
+    \item \textbf{Automatic Prompt Engineering}: not used.
+    \item \textbf{Graph Prompting}, \textbf{Multimodal CoT}: not used.
+\end{itemize}
+
+\section{Shimming Layer and MCP Integration}
+
+\subsection{Motivation}
+
+Native LLMs (GPT, Gemini API) can directly interact with MCP servers.  
+Open-source models (e.g.\ Llama-based models via Ollama) do not natively support the MCP protocol nor the required turn-based tool-call constraints.
+
+Additionally, the triage task requires contextual information that is:
+\begin{itemize}
+    \item not contained in the crash report,
+    \item not embedded in the model’s parameters,
+    \item dynamically retrievable only through static-analysis tools.
+\end{itemize}
+
+Examples include:
+\begin{itemize}
+    \item the decompiled body of the crashing function,
+    \item cross-references to memory operations,
+    \item resource lookups from the APK,
+    \item Java call graph reconstruction.
+\end{itemize}
+
+Without this evidence, the model cannot reliably classify vulnerabilities.
+
+\subsection{Design of the Shimming Layer}
+
+The shimming layer acts as a mediator between the \gls{llm} and the MCP tool ecosystem by enforcing:
+\begin{itemize}
+    \item strict JSON-only communication;
+    \item one tool call per turn;
+    \item mandatory tool-use before outputting a final verdict;
+    \item correct routing to Jadx-MCP or Ghidra-MCP servers;
+    \item automatic correction of malformed model outputs;
+    \item retries and error handling.
+\end{itemize}
+
+The LLM therefore remains “free” to choose \emph{which} information to retrieve, but is forced to do so within a safe, deterministic protocol.
+
+\subsection{Why MCP Tools Are Needed}
+
+The MCP integration enables:
+\begin{itemize}
+    \item \textbf{expanded context}: access to code, manifest, Java classes, native functions;
+    \item \textbf{dynamic retrieval}: adaptively query deeper evidence when ambiguous crashes occur;
+    \item \textbf{precision}: avoid hallucinated code by grounding analysis in real decompiled output;
+    \item \textbf{transparency}: evidence is explicitly returned in the JSON result (file, function, snippet).
+\end{itemize}
+
+In essence, the MCP tools provide the LLM with “eyes” into the application’s codebase, transforming the model into a hybrid static-analysis reasoning agent.
+
+\section{Summary}
+
+The system design combines:
+\begin{itemize}
+    \item a multi-stage evidence-driven analysis pipeline,
+    \item a rich meta-prompt defining the LLM’s reasoning behaviour,
+    \item modern prompting techniques (Meta Prompting, PAL, ReAct, Chain-of-Thought),
+    \item a robust shimming layer,
+    \item and MCP-based integration with static-analysis tools.
+\end{itemize}
+
+This architecture enables reproducible, explainable, and tool-assisted vulnerability triage for JNI-based Android applications.
+
