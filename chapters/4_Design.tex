@@ -17,11 +17,19 @@ The triage process is structured as a multi-stage pipeline in which the \gls{llm
 
 Figure~\ref{fig:pipeline_design} illustrates the workflow:
 
+\begin{figure}
+    \centering
+    \scalebox{0.8}{\input{tikzpicture/pipeline_design}}
+    %\includegraphics[width=0.5\linewidth]{}
+    \caption{Overview of the pipeline workflow combining POIROT fuzzing, crash analysis, and MCP-based code inspection tools.}
+    \label{fig:pipeline_design}
+\end{figure}
+
 \begin{enumerate}
     \item The crash reports produced by POIROT are parsed into structured \texttt{CrashSummary} objects.
     \item Relevant native libraries are identified and loaded into Ghidra; the APK is opened in Jadx.
     \item The \gls{llm} receives a system-level meta-prompt defining its role, objectives, rules, and output schema.
-    \item For each crash, a user prompt provides the runtime context (stack, termination reason, JNI bridge method, Java call graph).
+    \item For each crash, a user prompt provides the runtime context \texttt{CrashSummary}.
     \item The model decides which tool calls to execute through the \gls{mcp}, such as:
     \begin{itemize}
         \item locating functions (\texttt{search\_functions\_by\_name});
@@ -32,6 +40,65 @@ Figure~\ref{fig:pipeline_design} illustrates the workflow:
 \end{enumerate}
 
 The pipeline therefore embodies an *analysis loop*: crash context → retrieval via tools → reasoning → structured verdict.
+
+\subsection{Crash Report Parsing}
+
+The first stage of the pipeline consists of transforming the raw output produced by POIROT into a structured and representation for easier use.  
+Each crash block from the POIROT report is parsed into an instance of \texttt{CrashSummary}, which captures the essential execution artefacts: process termination reason, native stack trace, JNI bridge method, fuzzer entry point, and reconstructed Java call graph.
+
+The Java call graph is obtained directly from the APK.  It represents the sequence of Java method invocations that must occur to reach the specific Java method responsible for calling the native function that crashed.  
+In this way, the call graph provides contextual information about how the application arrives at the JNI boundary, enabling the \gls{llm} to reason about the reachability and plausibility of the crash path within the application's execution flow.
+
+\texttt{CrashSummary} contains all the essential information required to perform the triage: the origin of the crash, the native stack trace from the failure point up to the JNI boundary, and the Java call graph describing the sequence of method invocations needed to reach the JNI entry point.
+
+
+\subsection{Project Initialisation: Jadx and Ghidra Setup}
+
+Once the crash data is parsed, the corresponding application artefacts are prepared.  
+The target APK is opened in Jadx to expose manifest information and Java classes.  
+The native libraries extracted from the APK (\texttt{.so} files) are loaded into Ghidra, which performs binary import and initial analysis (symbol extraction, program tree generation, code browser initialisation).  
+This step ensures that both static-analysis backends are ready to answer queries issued later by the \gls{llm} via the \gls{mcp}.
+
+\subsection{System-Level Meta-Prompt}
+
+Before any crash is analysed, the \gls{llm} is assigned a system-level meta-prompt that defines its role and responsibilities within the pipeline.  
+The meta-prompt specifies the expected reasoning behaviour, the structured output schema (JSON), the evidence requirements, the vulnerability classification criteria, and the rules governing tool use.  
+In addition to these high-level constraints, the system prompt also encodes an explicit internal pipeline that the model must follow when processing each crash.
+
+This internal workflow instructs the \gls{llm} on how to interpret the inputs it receives, i.e. the \texttt{CrashSummary}, with the Java call graph, and retrieved native and Java classes that must be used during analysis.  
+For instance, the prompt requires the model to reason \emph{backwards} from the point of failure, starting at the native crash origin and tracing the execution path to the furthest reachable location, both in the native stack and the Java-to-JNI call chain.  
+The model is explicitly told to invoke external tools via the \gls{mcp}, which information must be retrieved (e.g.\ decompiled functions, cross-references, manifest metadata), and how such evidence should be integrated.
+
+The system prompt further defines each field of the final output schema and instructs the model on how to populate it.  
+This includes guidance on how to assign a vulnerability verdict and justify it with grounded reasons. It also specifies how to list assumptions and limitations whenever the available evidence is incomplete.
+
+Through this combination of behavioural constraints, structured guidance, and explicit processing steps, the system prompt effectively encodes the ``cognitive rules'' that the model must follow.  
+%This ensures consistent, reproducible, and evidence-based triage decisions across different crashes and different \gls{llm} backends.
+
+
+\subsection{Crash-Specific User Prompt}
+
+For each crash, the \gls{llm} receives a dedicated user prompt containing the corresponding \\\texttt{CrashSummary}.  
+This includes the runtime context necessary to guide the analysis: stack trace, JNI entry point, Java-to-native call chain, and termination details.  
+The separation between system-level and user-level prompts allows the meta-prompt to remain stable across the whole execution while fault-specific information is injected incrementally.
+
+\subsection{Tool Invocation via MCP}
+
+During the analysis, the \gls{llm} autonomously decides which tool calls are needed to clarify specific hypotheses.  
+Through the \gls{mcp}, the model can:
+\begin{itemize}
+    \item locate relevant native functions via \texttt{search\_functions\_by\_name};
+    \item retrieve decompiled code using \texttt{decompile\_function};
+    \item inspect Java-side artefacts, such as manifests or class definitions, with \\\texttt{get\_android\_manifest} and \texttt{get\_class\_sources}.
+\end{itemize}
+These tool calls allow the \gls{llm} to ground its reasoning in factual program artefacts, reducing hallucinations and enabling evidence-based vulnerability assessment.
+
+\subsection{Evidence Integration and Final Report Generation}
+
+In the final stage, the \gls{llm} aggregates the retrieved evidence and synthesises a structured vulnerability report.  
+The output follows a constrained JSON schema and includes: vulnerability verdict, confidence score, severity, CWE identifiers, affected libraries, reasoning steps, code evidence, assumptions, and limitations.  
+This machine-readable output forms the core deliverable of the triage pipeline and can be archived, inspected, or further processed by downstream components.
+
 
 \section{Prompting Strategy}
 

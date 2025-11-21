@@ -458,6 +458,8 @@ Each report is written to: \texttt{<out-dir>/<pkg>/<JNImethod>/report.json}
 Listing~\ref{lst:jsonOutput} shows an example of the final JSON output.  
 %The structure is defined by the \texttt{AnalysisContainer}, \texttt{AnalysisBlock}, and \texttt{AnalysisResult}.
 
+\textcolor{red}{added call\_sequence and Exploit}
+
 \paragraph{Structure overview.}
 The top-level object contains a single field, \texttt{analysis}, wrapping all the relevant metadata and results:
 
@@ -571,7 +573,7 @@ The second script, \texttt{dockerRun.sh}, provides a simplified interface for la
 The program is executed from the command line using Python~3:
 
 \begin{verbatim}
-python3 main.py <target_APK> [options]
+     python3 main.py <target_APK> [options]
 \end{verbatim}
 
 where \texttt{<target\_APK>} is the path to the POIROT output directory containing the analysed applications.  
@@ -613,10 +615,10 @@ sets a timeout of 240 seconds for MCP server operations, and enables debug-mode 
 \begin{lstlisting}[language=Python, 
 caption={Execution of the vulnerability-triage pipeline using \texttt{main.py}, which orchestrates the Jadx and Ghidra MCP servers}, 
 label={lst:triageExecution}]
-python3 main.py ./target_APK \
-    --apk-list ./apk_list.txt \
-    -m gemini-2.5-flash \
-    -o ./results \
-    --timeout 240 \
-    --debug
+    python3 main.py ./target_APK \
+        --apk-list ./apk_list.txt \
+        -m gemini-2.5-flash \
+        -o ./results \
+        --timeout 240 \
+        --debug
 \end{lstlisting}

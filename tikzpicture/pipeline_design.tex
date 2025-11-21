@@ -1,0 +1,52 @@
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  node distance=1.8cm and 2.2cm,
+  >=latex,
+  block/.style={rectangle, rounded corners, draw, align=center, minimum height=1cm, minimum width=2.7cm},
+  io/.style={rectangle, draw, align=center, minimum height=1.5cm, minimum width=3.0cm},
+  proc/.style={rectangle, rounded corners, draw, align=center, minimum height=1cm, minimum width=3.2cm},
+  mcp/.style={rectangle, draw, dashed, align=center, minimum height=1cm, minimum width=3.0cm},
+  line/.style={draw, ->},
+  dashedline/.style={draw, dashed, <->}
+]
+
+% Row 1: Inputs
+\node[io] (apk) {\textbf{Target APK}\\\texttt{base.apk} +\\native libs};
+\node[io, right=of apk] (poirot) {\textbf{POIROT}\\Fuzzing};
+
+% Row 2: Parsing / setup
+\node[proc, below=of poirot] (crashparser) {\texttt{\textbf{CrashSummary}}\\Crash report parser};
+\node[proc, below=of apk] (setup) {Project setup\\Jadx + Ghidra};
+
+% Row 3: LLM triage agent
+\node[block, below=1.9cm of $(crashparser)!0.5!(setup)$] (agent) {\textbf{LLM triage agent}\\(meta-prompt + JSON schema)};
+
+% Row 4: MCP tools
+\node[mcp, below left=2.0cm and 0.3cm of agent] (jadx) {\textbf{Jadx MCP}\\APK / Java view};
+\node[mcp, below right=2.0cm and 0.3cm of agent] (ghidra) {\textbf{Ghidra MCP}\\native code view};
+
+% Output
+\node[io, right=3.2cm of agent] (report) {Structured \textbf{JSON report}\\\texttt{report.json}};
+
+% Solid data-flow arrows
+\path[line] (apk) -- node[above]{} (poirot);
+\path[line] (poirot) -- node[right,pos=0.4]{} (crashparser);
+\path[line] (apk) -- node[right,pos=0.4]{} (setup);
+\path[line] (crashparser) -- node[right,pos=0.45]{Crash Context} (agent);
+\path[line] (setup) -- node[left,pos=0.45]{Loaded APKs and libs} (agent);
+\path[line] (agent) -- node[above]{Vulnerability Triage} (report);
+
+% Dashed MCP/tool-call arrows
+\path[dashedline] (agent) -- node[left,sloped,near start,align=center, xshift=9]{Tool call\\Tool response} (jadx);
+\path[dashedline] (agent) -- node[right,sloped,near start,align=center, xshift=-9]{Tool call\\Tool response}  (ghidra);
+
+% Legend
+\node[block, minimum width=1.8cm, minimum height=0.8cm, below=0.7cm of report, xshift=1.0cm] (legend1) {};
+\node[right=0.3cm of legend1] (legendtext1) {Data flow};
+\draw[line] (legend1.west) -- ++(-0.8,0);
+
+\node[mcp, minimum width=1.8cm, minimum height=0.8cm, below=0.4cm of legend1] (legend2) {};
+\node[right=0.3cm of legend2] (legendtext2) {MCP tool calls};
+\draw[dashedline] (legend2.west) -- ++(-0.8,0);
+
+\end{tikzpicture}
