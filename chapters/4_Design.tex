@@ -1,6 +1,8 @@
 \chapter{Design}
 \label{chp:design}
 
+\textcolor{red}{Gestione del GhidraMCP e modifiche a Jadx MCP}
+
 This chapter presents the conceptual design of the automated crash triage system.  
 The goal is to define the overall workflow, the interaction model between the \gls{llm} and external tools, and the prompting strategy that enables reliable, explainable vulnerability assessments.
 
@@ -91,13 +93,20 @@ Through the \gls{mcp}, the model can:
     \item retrieve decompiled code using \texttt{decompile\_function};
     \item inspect Java-side artefacts, such as manifests or class definitions, with \\\texttt{get\_android\_manifest} and \texttt{get\_class\_sources}.
 \end{itemize}
-These tool calls allow the \gls{llm} to ground its reasoning in factual program artefacts, reducing hallucinations and enabling evidence-based vulnerability assessment.
+These tool calls allow the \gls{llm} to anchor its analysis in concrete information extracted directly from the application, thereby reducing hallucinations and enabling a more reliable, evidence-driven vulnerability assessment. \textcolor{red}{Qui mi baso sul fatto che alcuni paper parlavano che agli llm manca il contesto}
 
 \subsection{Evidence Integration and Final Report Generation}
 
-In the final stage, the \gls{llm} aggregates the retrieved evidence and synthesises a structured vulnerability report.  
-The output follows a constrained JSON schema and includes: vulnerability verdict, confidence score, severity, CWE identifiers, affected libraries, reasoning steps, code evidence, assumptions, and limitations.  
-This machine-readable output forms the core deliverable of the triage pipeline and can be archived, inspected, or further processed by downstream components.
+In the final stage, the \gls{llm} aggregates all retrieved evidence and synthesises a structured vulnerability report.  
+The model combines information extracted from the crash context, the Java call graph, and the native and Java artefacts accessed via MCP tools.  
+%This step is critical because it consolidates heterogeneous data sources into a unified representation that reflects both the dynamic behaviour of the crash and the static structure of the application.
+
+The output follows a constrained JSON schema and includes fields such as the vulnerability verdict, confidence score, severity, CWE identifiers, affected libraries, reasoning steps, code evidence, assumptions, and limitations.  
+Each field is populated according to explicit rules defined in the system-level meta-prompt: for example, The confidence score should reflect the degree to which the classification is considered accurate; evidence items must reference concrete function names, addresses, or decompiled snippets; and assumptions or limitations must be stated whenever the available artefacts are incomplete or ambiguous.
+
+The final report is entirely machine-readable and encapsulates both the analytical process and the supporting evidence.  
+This makes it suitable not only for manual inspection by security analysts but also for automated downstream processing, such as filtering high-severity findings, or generating aggregated statistics across multiple applications.  
+The JSON structure therefore serves as the primary output of the triage pipeline, providing a consistent interface for downstream analysis, auditing, and reproducibility.
 
 
 \section{Prompting Strategy}
