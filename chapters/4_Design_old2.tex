@@ -1,0 +1,272 @@
+\chapter{Design}
+\label{chp:design}
+
+% design si riferisce alla fase di modellazione. Nel tuo caso, può essere la pipeline/il workflow che andrai a definire per interrogare gli LLM. Non so se i prompt vadano in design  o implementation, poi vedremo...forse, implementation la toglieremo del tutto
+
+\textcolor{red}{Gestione del GhidraMCP e modifiche a Jadx MCP}
+
+This chapter presents the conceptual design of the automated crash triage system.  
+The goal is to define the overall workflow, the interaction model between the \gls{llm} and external tools, and the prompting strategy that enables reliable, explainable vulnerability assessments.
+
+The design focuses on three complementary aspects:
+\begin{enumerate}
+    \item the architecture of the triage pipeline and its information flow;
+    \item the prompting framework used to guide the \gls{llm};
+    \item the tool-orchestration layer (shimming) that enables controlled access to \gls{mcp}-exposed capabilities.
+\end{enumerate}
+
+\section{Pipeline and Workflow Design}
+
+The triage process is structured as a multi-stage pipeline in which the \gls{llm} acts as a reasoning engine, while static-analysis tools (Ghidra, Jadx) act as retrieval and inspection backends.
+
+Figure~\ref{fig:pipeline_design} illustrates the workflow:
+
+\begin{figure}
+    \centering
+    \scalebox{0.8}{\input{tikzpicture/pipeline_design}}
+    %\includegraphics[width=0.5\linewidth]{}
+    \caption{Overview of the pipeline workflow combining POIROT fuzzing, crash analysis, and MCP-based code inspection tools.}
+    \label{fig:pipeline_design}
+\end{figure}
+
+\begin{enumerate}
+    \item The crash reports produced by POIROT are parsed into structured \texttt{CrashSummary} objects.
+    \item Relevant native libraries are identified and loaded into Ghidra; the APK is opened in Jadx.
+    \item The \gls{llm} receives a system-level meta-prompt defining its role, objectives, rules, and output schema.
+    \item For each crash, a user prompt provides the runtime context \texttt{CrashSummary}.
+    \item The model decides which tool calls to execute through the \gls{mcp}, such as:
+    \begin{itemize}
+        \item locating functions (\texttt{search\_functions\_by\_name});
+        \item retrieving decompiled native code (\texttt{decompile\_function}, \texttt{disassemble\_function});
+        \item exploring Java-side call sites (\texttt{get\_android\_manifest}, \texttt{get\_class\_sources}).
+    \end{itemize}
+    \item The \gls{llm} integrates retrieved evidence and produces a final JSON vulnerability report.
+\end{enumerate}
+
+The pipeline therefore embodies an *analysis loop*: crash context → retrieval via tools → reasoning → structured verdict.
+
+\subsection{Crash Report Parsing}
+
+The first stage of the pipeline consists of transforming the raw output produced by POIROT into a structured and representation for easier use.  
+Each crash block from the POIROT report is parsed into an instance of \texttt{CrashSummary}, which captures the essential execution artefacts: process termination reason, native stack trace, JNI bridge method, fuzzer entry point, and reconstructed Java call graph.
+
+The Java call graph is obtained directly from the APK.  It represents the sequence of Java method invocations that must occur to reach the specific Java method responsible for calling the native function that crashed.  
+In this way, the call graph provides contextual information about how the application arrives at the JNI boundary, enabling the \gls{llm} to reason about the reachability and plausibility of the crash path within the application's execution flow.
+
+\texttt{CrashSummary} contains all the essential information required to perform the triage: the origin of the crash, the native stack trace from the failure point up to the JNI boundary, and the Java call graph describing the sequence of method invocations needed to reach the JNI entry point.
+
+
+\subsection{Project Initialisation: Jadx and Ghidra Setup}
+
+Once the crash data is parsed, the corresponding application artefacts are prepared.  
+The target APK is opened in Jadx to expose manifest information and Java classes.  
+The native libraries extracted from the APK (\texttt{.so} files) are loaded into Ghidra, which performs binary import and initial analysis (symbol extraction, program tree generation, code browser initialisation).  
+This step ensures that both static-analysis backends are ready to answer queries issued later by the \gls{llm} via the \gls{mcp}.
+
+\subsection{System-Level Meta-Prompt}
+
+Before any crash is analysed, the \gls{llm} is assigned a system-level meta-prompt that defines its role and responsibilities within the pipeline.  
+The meta-prompt specifies the expected reasoning behaviour, the structured output schema (JSON), the evidence requirements, the vulnerability classification criteria, and the rules governing tool use.  
+In addition to these high-level constraints, the system prompt also encodes an explicit internal pipeline that the model must follow when processing each crash.
+
+This internal workflow instructs the \gls{llm} on how to interpret the inputs it receives, i.e. the \texttt{CrashSummary}, with the Java call graph, and retrieved native and Java classes that must be used during analysis.  
+For instance, the prompt requires the model to reason \emph{backwards} from the point of failure, starting at the native crash origin and tracing the execution path to the furthest reachable location, both in the native stack and the Java-to-JNI call chain.  
+The model is explicitly told to invoke external tools via the \gls{mcp}, which information must be retrieved (e.g.\ decompiled functions, cross-references, manifest metadata), and how such evidence should be integrated.
+
+The system prompt further defines each field of the final output schema and instructs the model on how to populate it.  
+This includes guidance on how to assign a vulnerability verdict and justify it with grounded reasons. It also specifies how to list assumptions and limitations whenever the available evidence is incomplete.
+
+Through this combination of behavioural constraints, structured guidance, and explicit processing steps, the system prompt effectively encodes the ``cognitive rules'' that the model must follow.  
+%This ensures consistent, reproducible, and evidence-based triage decisions across different crashes and different \gls{llm} backends.
+
+
+\subsection{Crash-Specific User Prompt}
+
+For each crash, the \gls{llm} receives a dedicated user prompt containing the corresponding \\\texttt{CrashSummary}.  
+This includes the runtime context necessary to guide the analysis: stack trace, JNI entry point, Java-to-native call chain, and termination details.  
+The separation between system-level and user-level prompts allows the meta-prompt to remain stable across the whole execution while fault-specific information is injected incrementally.
+
+\subsection{Tool Invocation via MCP}
+
+During the analysis, the \gls{llm} autonomously decides which tool calls are needed to clarify specific hypotheses.  
+Through the \gls{mcp}, the model can:
+\begin{itemize}
+    \item locate relevant native functions via \texttt{search\_functions\_by\_name};
+    \item retrieve decompiled code using \texttt{decompile\_function};
+    \item inspect Java-side artefacts, such as manifests or class definitions, with \\\texttt{get\_android\_manifest} and \texttt{get\_class\_sources}.
+\end{itemize}
+These tool calls allow the \gls{llm} to anchor its analysis in concrete information extracted directly from the application, thereby reducing hallucinations and enabling a more reliable, evidence-driven vulnerability assessment. \textcolor{red}{Qui mi baso sul fatto che alcuni paper parlavano che agli llm manca il contesto}
+
+\subsection{Evidence Integration and Final Report Generation}
+
+In the final stage, the \gls{llm} aggregates all retrieved evidence and synthesises a structured vulnerability report.  
+The model combines information extracted from the crash context, the Java call graph, and the native and Java artefacts accessed via MCP tools.  
+%This step is critical because it consolidates heterogeneous data sources into a unified representation that reflects both the dynamic behaviour of the crash and the static structure of the application.
+
+The output follows a constrained JSON schema and includes fields such as the vulnerability verdict, confidence score, severity, CWE identifiers, affected libraries, reasoning steps, code evidence, assumptions, and limitations.  
+Each field is populated according to explicit rules defined in the system-level meta-prompt: for example, The confidence score should reflect the degree to which the classification is considered accurate; evidence items must reference concrete function names, addresses, or decompiled snippets; and assumptions or limitations must be stated whenever the available artefacts are incomplete or ambiguous.
+
+The final report is entirely machine-readable and encapsulates both the analytical process and the supporting evidence.  
+This makes it suitable not only for manual inspection by security analysts but also for automated downstream processing, such as filtering high-severity findings, or generating aggregated statistics across multiple applications.  
+The JSON structure therefore serves as the primary output of the triage pipeline, providing a consistent interface for downstream analysis, auditing, and reproducibility.
+
+
+\section{Prompting Strategy}
+
+The prompting strategy plays a pivotal role in ensuring the consistency, validity, and safety of the generated analyses.  
+Multiple established prompting techniques are employed, as categorised by the Prompt Engineering Guide\footnote{\url{https://www.promptingguide.ai/techniques}}.
+
+\subsection{Meta Prompting (Primary Technique)}
+
+The central system prompt (\texttt{DETECTION\_SYSTEM\_PROMPT}) acts as a \emph{meta-prompt}, as defined in the Prompt Engineering Guide.  
+It prescribes:
+\begin{itemize}
+    \item the task definition (crash triage and vulnerability assessment);
+    \item constraints on the reasoning process (data-flow tracing, validation steps, reachability analysis);
+    \item which external tools may be used (MCP Jadx, MCP Ghidra);
+    \item how intermediate evidence must be interpreted;
+    \item strict output constraints (Pydantic-compliant JSON);
+    \item behaviour when information is missing (no hallucinations; explicit limitations).
+\end{itemize}
+
+This technique defines the “cognitive profile” of the model and ensures uniformity across assessments.
+
+\subsection{Tool-Augmented Reasoning (PAL / Automatic Tool Use)}
+
+The system relies on *Program-Aided Language Models (PAL)* and *Automatic Reasoning and Tool-Use*, as defined in the Prompting Guide.  
+The model:
+\begin{itemize}
+    \item determines autonomously which tool calls to issue;
+    \item retrieves code, symbols, and metadata via MCP backends;
+    \item integrates results before proceeding with reasoning.
+\end{itemize}
+
+This transforms the \gls{llm} from a text generator into an orchestrator of static-analysis queries.
+
+\subsection{ReAct: Reason + Act Loops}
+
+The design follows the ReAct paradigm:
+\begin{itemize}
+    \item \emph{Reason}: interpret stack traces, map frames to functions, identify suspicious patterns;
+    \item \emph{Act}: invoke Ghidra or Jadx tools to confirm hypotheses;
+    \item \emph{Reason}: integrate the new evidence and refine the assessment.
+\end{itemize}
+
+This is especially effective for triage, where hypotheses must be validated through code inspection.
+
+\subsection{Implicit Chain-of-Thought}
+
+While explicit chain-of-thought is not revealed in the output, the system prompt enforces a multi-step reasoning checklist:
+\begin{enumerate}
+    \item correlate runtime failure with native call site;
+    \item trace data backward through native and Java call chains;
+    \item determine whether inputs are attacker-controlled;
+    \item evaluate reachability under realistic conditions;
+    \item classify the vulnerability and assign a severity score.
+\end{enumerate}
+
+The model implicitly follows this pipeline to ensure reliable judgments.
+
+\subsection{Prompt Chaining}
+
+Each crash triggers:
+\begin{itemize}
+    \item an initial query,
+    \item one or more MCP tool calls,
+    \item a final structured verdict.
+\end{itemize}
+
+This sequential exchange mirrors the Prompt Chaining technique from the guide.
+
+\subsection{Self-Consistency (Retry-Based)}
+
+The system incorporates retry loops in the shimming layer:
+\begin{itemize}
+    \item malformed JSON → regenerate;
+    \item insufficient evidence → request additional tool calls.
+\end{itemize}
+
+This reproduces the Self-Consistency technique, increasing robustness across models.
+
+\subsection{Structured Output Constraints}
+
+The output is strictly constrained by Pydantic schemas, ensuring machine-readability and preventing hallucinated fields.
+
+\subsection{Techniques Not Used}
+
+According to the Prompting Guide:
+\begin{itemize}
+    \item \textbf{Zero-shot} and \textbf{few-shot prompting}: not used.
+    \item \textbf{Tree-of-Thought}: not used.
+    \item \textbf{Retrieval-Augmented Generation (RAG)}:  
+    \textcolor{red}{Possibile dubbio: l’uso degli MCP costituisce RAG?}  
+    Tecnicamente, RAG implica una conoscenza esterna indicizzata (KB o corpus).  
+    Qui l’LLM interroga strumenti di analisi statica, non un archivio testuale.  
+    Pertanto non è RAG nei termini classici.
+    \item \textbf{Automatic Prompt Engineering}: not used.
+    \item \textbf{Graph Prompting}, \textbf{Multimodal CoT}: not used.
+\end{itemize}
+
+\section{Shimming Layer and MCP Integration}
+
+\subsection{Motivation}
+
+Native LLMs (GPT, Gemini API) can directly interact with MCP servers.  
+Open-source models (e.g.\ Llama-based models via Ollama) do not natively support the MCP protocol nor the required turn-based tool-call constraints.
+
+Additionally, the triage task requires contextual information that is:
+\begin{itemize}
+    \item not contained in the crash report,
+    \item not embedded in the model’s parameters,
+    \item dynamically retrievable only through static-analysis tools.
+\end{itemize}
+
+Examples include:
+\begin{itemize}
+    \item the decompiled body of the crashing function,
+    \item cross-references to memory operations,
+    \item resource lookups from the APK,
+    \item Java call graph reconstruction.
+\end{itemize}
+
+Without this evidence, the model cannot reliably classify vulnerabilities.
+
+\subsection{Design of the Shimming Layer}
+
+The shimming layer acts as a mediator between the \gls{llm} and the MCP tool ecosystem by enforcing:
+\begin{itemize}
+    \item strict JSON-only communication;
+    \item one tool call per turn;
+    \item mandatory tool-use before outputting a final verdict;
+    \item correct routing to Jadx-MCP or Ghidra-MCP servers;
+    \item automatic correction of malformed model outputs;
+    \item retries and error handling.
+\end{itemize}
+
+The LLM therefore remains “free” to choose \emph{which} information to retrieve, but is forced to do so within a safe, deterministic protocol.
+
+\subsection{Why MCP Tools Are Needed}
+
+The MCP integration enables:
+\begin{itemize}
+    \item \textbf{expanded context}: access to code, manifest, Java classes, native functions;
+    \item \textbf{dynamic retrieval}: adaptively query deeper evidence when ambiguous crashes occur;
+    \item \textbf{precision}: avoid hallucinated code by grounding analysis in real decompiled output;
+    \item \textbf{transparency}: evidence is explicitly returned in the JSON result (file, function, snippet).
+\end{itemize}
+
+In essence, the MCP tools provide the LLM with “eyes” into the application’s codebase, transforming the model into a hybrid static-analysis reasoning agent.
+
+\section{Summary}
+
+The system design combines:
+\begin{itemize}
+    \item a multi-stage evidence-driven analysis pipeline,
+    \item a rich meta-prompt defining the LLM’s reasoning behaviour,
+    \item modern prompting techniques (Meta Prompting, PAL, ReAct, Chain-of-Thought),
+    \item a robust shimming layer,
+    \item and MCP-based integration with static-analysis tools.
+\end{itemize}
+
+This architecture enables reproducible, explainable, and tool-assisted vulnerability triage for JNI-based Android applications.
+

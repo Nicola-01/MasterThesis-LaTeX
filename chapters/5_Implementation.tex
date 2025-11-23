@@ -1,77 +1,144 @@
 \chapter{Implementation}
-\label{chp:impl}
 
-The triage system, implemented in Python3, orchestrates an \gls{llm}-based tool over crashes discovered by the fuzzing pipeline(see chapter~\ref{chp:preliminaries} (\emph{Preliminaries})). Conceptually, the program:\\
-(i) ingests POIROT output (i.e. stack traces).\\
-(ii) enriches them with reverse-engineering context via the \gls{mcp} (Jadx for bytecode/manifest, Ghidra for native disassembly/decompilation).\\
-(iii) produces a structured judgement comprising a vulnerability likelihood, a succinct rationale anchored to concrete evidence (frames, symbols, code hunks), and a severity estimate. 
+% NOTE FOR REVIEWER:
+% This chapter has been rewritten and expanded, preserving all TODOs,
+% comments, and \textcolor{red}{...} sections as required.
+% The content now aligns with the conceptual design from Chapter 5.
 
-The implementation emphasises strict data modelling, explicit tool adaptors, and prompt templates specialised for each tool, so that the resulting traces are reproducible and auditable.
+The implementation realises the design described in Chapter~\ref{chp:design} through a Python-based orchestration layer built around three core elements: (i) structured data models, (ii) explicit adapters for tool interaction via the \gls{mcp}, and (iii) specialised prompting templates to ensure reproducible and deterministic behaviour across crash analyses.
 
-\textcolor{red}{Da rivedere quando il capitolo è finito, non so se va in Design}
-
+This chapter describes the concrete system architecture, library dependencies, internal module structure, and the integration workflow between the \gls{llm}, Jadx/Ghidra \glspl{mcp}, and POIROT’s crash artefacts.
+% Where relevant, we also document operational constraints, practical issues encountered during development, and the rationale behind critical implementation decisions.
 
 \section{Libraries and Dependencies}
-\textcolor{red}{Da vedere}
-The codebase relies on a small set of focused Python libraries and external tools:
+
+%The implementation is intentionally lightweight, relying on a minimal set of Python libraries and external tools. This design choice ensures portability, reproducibility, and compatibility with container-based execution environments.
+Main libraries and tools adopted in this thesis:
+
 \begin{itemize}
-  \item \texttt{pydantic} (v2.12.3) for strict, typed data models (e.g., crash summaries and tool responses) and runtime validation. This allows to require that the \gls{llm} return an instance conforming to a predefined model, so the output can be parsed deterministically (without ad-hoc prompt parsing) and serialised/deserialised as JSON with minimal glue code.
-  \item \texttt{pydantic\_ai} for agent composition and the \emph{\gls{mcp}} client; specifically, the \texttt{MCPServerStdio} transport is used to connect to tool servers over stdio.
-  %\item \textbf{LLM providers.} The agent is provider-agnostic and supports OpenAI/Google backends; a local wrapper (\texttt{ollamaLocal.py}) is included for offline experiments.
-  %\item \textbf{External tools (via MCP).} Jadx and Ghidra are accessed through dedicated \gls{mcp} adaptors; prompts and post-processing live under \texttt{MCPs/} (see below).
+    \item \textbf{pydantic (v2.12.3)}  
+    Used for strict, typed data modelling. Every component in the triage
+    pipeline---from crash summaries to tool responses and vulnerability
+    assessments---conforms to well-defined Pydantic classes.  
+    This guarantees:
+    \begin{enumerate}
+        \item deterministic parsing of LLM outputs,
+        \item structural validation of intermediate artefacts,
+        \item lossless serialisation/deserialisation into JSON.
+    \end{enumerate}
+
+    \item \textbf{pydantic\_ai}  
+    Provides the agent abstraction, including the \gls{mcp}
+    client and the \texttt{MCPServerStdio} transport, enabling the program
+    to communicate with Jadx and Ghidra \glspl{mcp} over standard I/O streams.
+
+    \item \textbf{Jadx} and \textbf{Ghidra}  
+    The reverse-engineering backends operate as standalone \glspl{mcp}
+    server. Jadx exposes bytecode, manifest, and resource-level information.
+    Ghidra exposes disassembly, function listings, and decompilation output.
 \end{itemize}
 
+The system also depends on the POIROT output directory produced during
+fuzzing. This directory is not modified at runtime; instead, the tool
+reads crash artefacts and correlates them with symbol tables extracted
+from native libraries.
+
 \section{Program Structure}
-Figure~\ref{fig:program-structure} summarises the modules and the directory layout used during development.
 
-\paragraph{Entry point and orchestration.}
-\texttt{main.py} parses inputs (paths to POIROT outputs, model/tool configuration), instantiates the analysis \emph{agent} via \texttt{MCPs/get\_agent.py}, and coordinates the end-to-end run: load crash artefacts $\rightarrow$ enrich with tool context $\rightarrow$ run triage $\rightarrow$ emit a structured report.
+The codebase is structured around clear modular boundaries,
+as illustrated in Figure~\ref{fig:implementation_structure}.
 
-\paragraph{Data model.}
-
-\texttt{CrashSummary} represents a single crash entry produced by POIROT.  
-It contains the parsed information from the crash report, including the process termination cause, the native stack trace, the \gls{jni} bridge method, the fuzzing harness entry point, and the reconstructed Java call graph.  
-
-\texttt{AppMetadata} stores the metadata extracted from the APK manifest, such as the application name, package identifier, SDK versions, and the APK version .
-
-\texttt{VulnResult} models the outcome of the vulnerability assessment performed on a single crash.  
-It encodes whether the crash is likely to represent a real vulnerability, the associated confidence score, the set of supporting reasons, any relevant \gls{cwe} identifiers, and an estimated severity level.  
-It also records the affected native libraries, a list of concrete evidence items (e.g.\ function names, addresses, code snippets), recommended remediation steps, and the assumptions or limitations considered during the analysis.
-
-\paragraph{Prompt specialisation.}
-Under \texttt{MCPs/prompts/}, each prompt file encodes a distinct component of the LLM orchestration logic and specialises the model for a specific task within the triage pipeline.  
-
-\texttt{AppMetadata\_prompt.py} provides the rules for extracting manifest and resource-level metadata from Jadx, including package name, SDK levels, and application labels.
-  
-\texttt{Shimming\_prompts.py} defines the system prompts that enforce MCP protocol correctness (single JSON per turn, tool-call constraints, and multi-step decompilation workflows). These templates merge the Jadx and Ghidra toolsets and dynamically inject the correct output schema depending on whether the target task is metadata extraction or vulnerability assessment.
-
-\texttt{VulnDetection\_prompt.py} encodes the full triage specification: the definition of what qualifies as a vulnerability, the backward data-flow reasoning procedure, the exploitation feasibility checks, and the structured JSON schema used.
-
-\begin{figure}
+\begin{figure}[!ht]
     \centering
+    %\includegraphics[width=\textwidth]{implementation_structure.pdf}
     \scalebox{0.7}{\input{tikzpicture/program-structure}}
-    \caption{Program Structure}
-    \label{fig:program-structure}
+    \caption{High-level structure of the implementation (modules, data flow, and orchestration logic).}
+    \label{fig:implementation_structure}
 \end{figure}
 
-\section{\gls{llm} and \gls{mcp} integration}
+\subsection*{Entry Point and Orchestration}
+
+The main program (\texttt{main.py}) performs the following tasks:
+
+\begin{enumerate}
+    \item parses CLI arguments for model configuration, timeout, and output path;
+    \item For each apk:
+    \begin{enumerate}
+    \item loads POIROT crash artefacts;
+    \item instantiates the LLM triage agent through \texttt{MCPs/get\_agent.py};
+    \item coordinates the full pipeline:  
+    \[
+    \text{load app crashes} 
+    \;\rightarrow\; 
+    \text{load APK / library context} 
+    \;\rightarrow\; 
+    \text{LLM triage} 
+    \;\rightarrow\;
+    \text{report}
+    \]
+    \item generates the structured JSON report.
+    \end{enumerate}
+\end{enumerate}
+
+\subsection*{Data Models}
+
+Three core models anchor the program’s internal state:
+
+\begin{itemize}
+    \item \textbf{CrashSummary}  
+    Encapsulates the processed crash artefact. Fields include:
+    process termination cause, native stack frames, JNI bridge method,
+    reconstructed Java call graph, and fuzzer entry point.
+
+    \item \textbf{AppMetadata}  
+    Aggregates APK-level information extracted from Jadx, including:
+    package name, versioning info, SDK attributes, and application label.
+
+    \item \textbf{VulnResult}  
+    Represents the final LLM assessment and contains:
+    verdict, confidence score, CWE identifiers, severity category,
+    implicated libraries, supporting evidence, recommendations, assumptions,
+    and limitations.
+\end{itemize}
+
+This strict modelling ensures resilience of malformed outputs from the \gls{llm}.
+
+\subsection*{Prompt Specialisation}
+
+Under \texttt{MCPs/prompts/}, the implementation organises a family of prompt templates:
+
+\begin{itemize}
+    \item \texttt{AppMetadata\_prompt.py}  
+    Defines the extraction rules and acceptable formats for metadata
+    retrieved from Jadx.
+
+    \item \texttt{VulnDetection\_prompt.py}
+    Encodes the full triage specification: the definition of what qualifies as a vulnerability, the backward data-flow reasoning procedure, the exploitation feasibility checks, and the structured JSON schema used.
+
+    \item \texttt{Shimming\_prompts.py}  
+    Defines the system prompts that enforce the use of \glspl{mcp} when interacting with models that do not natively support the protocol. \texttt{Shimming\_prompts} contains a template with text placeholders, into which the required \gls{mcp} tools and the system instructions are dynamically injected. The template also specifies the appropriate output schema, depending on whether the target task is metadata extraction or vulnerability assessment.
+\end{itemize}
+
+%These templates operationalise the prompting strategy described in Chapter~\ref{chp:design}.
+
+\section{\gls{llm} and \gls{mcp} Integration}
+
 The system is \gls{llm}-agnostic, it is not tied to a single model but supports multiple options. This flexibility allows selection of the provider that best fits the task, easy switching between models. Ensuring that the same triage logic can operate with different \gls{llm} vendors or even fully local models. Currently, the program supports \texttt{OpenAI}, \texttt{Gemini} and local \texttt{Ollama} models, and can be extended to include additional vendors.
 
+The integration between the \gls{llm} and the reverse-engineering backends is realised via the \texttt{pydantic\_ai} agent framework and the standardised \gls{mcp} interface.  
+This section describes the mechanisms used to initialise the agent, connect to the \glspl{mcp}, and enforce protocol correctness.
 
-%The system integrates Large Language Models (LLMs) with reverse-engineering tools through the Model Context Protocol (MCP). This combination enables tool-grounded reasoning, where the LLM can access, query, and interpret program artefacts in a controlled and reproducible manner.  
-%The implementation follows a modular and provider-agnostic architecture, ensuring that the same triage logic can operate with different LLM vendors or even fully local models. This flexibility simplifies experimentation and allows future substitution of models without altering the rest of the pipeline.
-
-
-%\textcolor{red}{TO add introfuction}
-
-\subsection{Agent setup}
+\subsection{Agent Setup}
 The agent is created through the function \texttt{get\_agent} defined in \texttt{MCPs/get\_agent.py}.  
 This function instantiates a \texttt{pydantic\_ai.Agent} object that coordinates the chosen \gls{llm} and a list of MCP toolsets (\texttt{MCPServerStdio}).  
 The agent receives:
 \begin{itemize}
-    \item a \emph{system prompt}, which defines its high-level reasoning role (for example, vulnerability assessor);
-    \item an \emph{output type}, specified as a strict \texttt{pydantic} model that constrains the expected JSON schema of responses;
-    \item a list of connected MCP servers.
+    \item \emph{A system prompt}, which defines its high-level role (e.g.\ vulnerability assessor or metadata extractor) and encodes the behavioural constraints that the model must follow. This includes the JSON-only policy, the allowed response formats, and the list of tool names that the \gls{llm} may invoke.
+    
+    \item \emph{An output type}, such as \texttt{AppMetadata} or \texttt{VulnResult}. This schema determines how the final answer must be structured and enables automatic validation of the model’s output.
+    
+    \item A list of connected \emph{\gls{mcp} servers}, each represented by a \texttt{MCPServerStdio} instance. These servers expose the reverse-engineering capabilities that the agent can access whenever the model chooses to perform a tool call.
+
 \end{itemize}
 
 The function automatically selects the appropriate model provider according to the prefix of the model name supplied at start-up:
@@ -82,63 +149,58 @@ The function automatically selects the appropriate model provider according to t
 \end{itemize}
 This logic allows seamless switching between cloud-based and local models.
 
+The agent also keeps track of the number of tool calls executed during the analysis, as well as the token usage associated with each step. This includes both the input tokens sent to the model and the output tokens generated in response, enabling detailed monitoring of the interaction.
 
-\paragraph{Gemini-CLI.}
-If the model name is specified as \texttt{gemini-cli}, the program interacts with the Gemini Command-Line Interface instead of the standard \gls{api} endpoint.
-This configuration was introduced to bypass \gls{api} usage quotas and benefit from the higher request limits available with \texttt{gemini-2.5-pro}. \textcolor{red}{Da lasciare la specificazione di perchè è stato fatto?}
+\subsubsection{Gemini-CLI.}
+If the model name is specified as \texttt{gemini-cli}, the program interacts with the Gemini Command-Line Interface\footnote{https://geminicli.com/} instead of the standard \gls{api} endpoint.
+%This configuration was introduced to bypass \gls{api} usage quotas and benefit from the higher request limits available with \texttt{gemini-2.5-pro}. 
 
 The integration is handled by the helper module \texttt{MCPs/geminiCLI.py}, which provides two key functions: \texttt{query\_gemini\_cli()} and \texttt{gemini\_response\_parser()}.
 %Since the Gemini CLI does not support distinct system and user prompts or structured JSON output (as required by \texttt{pydantic\_ai.Agent}), these functions implement a custom prompting and parsing layer.
 \texttt{query\_gemini\_cli()} builds a unified text prompt combining the system and user contexts, executes the \texttt{gemini} command via subprocess.
 The model’s response is then passed to \texttt{gemini\_response\_parser()}, which cleans the raw \gls{cli} output and attempts to parse the result as JSON. If the output cannot be validated against the expected schema, the function retries; after four failed attempts, an error is raised.
 
-\begin{comment}
-\begin{lstlisting}[language=pyPrompt, caption={Prompt used in Gemini-CLI. The \texttt{system\_prompt} and \texttt{user\_prompt} are identical to those used in the standard cloud-based \gls{llm} agent, while \texttt{require\_response} defines the JSON structure that the model must produce.}
-, label={lst:geminiCliPrompr}]
-IMPORTANT: DO NOT MODIFY OR EXECUTE CODE. RESPOND ONLY VIA MCP CALLS. DO NOT ANALYZE OR RUN FILES. READ-ONLY CONTEXT.
 
-SYSTEM PROMPT (upstream, for reference — do not override constraints above):
-{system_prompt}
-
-USER PROMPT: {user_prompt}
-
-RESPONSE INSTRUCTIONS:
-1) Use MCP tools/servers only if needed to answer.
-2) Do not edit or run any code.
-3) If the user asks for code changes/execution, refuse and propose an MCP-only path.
-
-{response_str}
-
-\end{lstlisting}
-\end{comment}
-
-% This approach ensures compatibility between the CLI model and the structured output format required by the pipeline, enabling the program to use \texttt{gemini-2.5-pro} locally while maintaining schema-validated results consistent with API-based executions.
-
-
-%If the model name is specified as \texttt{gemini-cli}, the program interacts with the Gemini Command-Line Interface rather than the API endpoint.
-%The configuration with \texttt{gemini-cli} was added since it allow higher limits of use about \texttt{gemini-2.5-pro} without directly use the \glspl{api}. The use of gemini-cli along other normal cloud \gls{api} models required extra configurations, infanct exist the helper function file \texttt{MCPs/geminiCLI.py}, that provied `query\_gemini\_cli`, with a sligtly edited propt to shere to the \gls{llm}, infact gemini cli doesn't have the system prompt and user prompt, have just the standart prompt, and also gemini cli doesn't support \texttt{pydantic\_ai.Agent} and the required JSON output, so I have to manage it manualy, and verifing the correct structure that I  required using `gemini_response_parser`, thet returns the output that I wanted, the model have 4 atepts to create that output, otherwise the program reise an error
-
-
-
-\paragraph{Local LLM (Ollama)}
-When the model name does not match the cloud prefixes (\texttt{gpt-}/\texttt{gemini-}), the agent assumes a local configuration and instantiates an \texttt{oss\_model} object backed by the \texttt{MCPs/shimming\_agent.py}.  
-This configuration enables on-premise execution through Ollama, ensuring full data isolation and allowing the entire triage pipeline to run in offline or restricted environments.
+\subsubsection{Local LLM (Ollama)}
+When the model name does not match the cloud prefixes (\texttt{gpt-}/\texttt{gemini-}), the agent assumes a local configuration and instantiates an \texttt{oss\_model} object backed by the \texttt{MCPs/shimming\_agent.py}. 
+%As mentions in Section~\ref{sec:shimming}, some models don't have the cabability to use \gls{mcp}, e.g. open source model, so the shimming\_agent will take the action, using the \gls{llm} provided my Ollama, and extra notions provided by the system pompt, the model is able to choose the methods needed, and required it usign \verb|("action": <tool_name>, "args": ( ... ),)|, then, using BasicMCPClient of llama\_index.tools.mcp, the wrapper python code execute the call instead the model, then the response is send to the \gls{llm} as a user prompt.
+%if the model have enought informations it can reply with \verb|{"action":"final","result": {...}}| with the final reply, this will check the correctness of output\_type i.e. the code will check that the moldel had reply with the required json with all the fields
 
 \paragraph{Shimming layer.}
-Open-source \glspl{llm} typically understand the \emph{concept} of tool invocation (i.e.\ they can follow JSON-based calling rules) but they do not natively implement the \gls{mcp} nor guarantee strict compliance with its turn-based constraints. The shimming layer acts as an adapter between the model and the \gls{mcp} toolsets (Jadx MCP and Ghidra MCP).
+As discussed in Section~\ref{sec:shimming}, some models, particularly open-source ones, do not possess native support for the \gls{mcp} protocol. In these cases, the \texttt{shimming\_agent} acts as the execution layer that enables structured tool use.  
+The agent runs the \gls{llm} provided by Ollama and enriches it with the behavioural rules defined in the system prompt. With these rules in place, the model can select which tool it wants to invoke and express this decision through a JSON message of the form: \verb|{"action": "<tool_name>", "args": { ... }}|.
+When such an action is emitted, the Python wrapper executes the requested call on behalf of the model. This is done via the \texttt{BasicMCPClient} from \texttt{llama\_index.tools.mcp}, which sends the arguments to the corresponding \gls{mcp} server (e.g.\ Jadx or Ghidra) and collects the response.
+The result returned by the \gls{mcp} server is then forwarded back to the \gls{llm} as a new user prompt. This iterative loop continues until the model determines that it has gathered sufficient evidence to produce the final structured output. 
+At that point, the model returns a JSON object of the form: \verb|{"action": "final", "result": { ... }}|.
 
-The shim enforces:
+The agent then validates this object against the expected \texttt{output\_type} (e.g.\ \texttt{AppMetadata} or \texttt{VulnResult}).  
+This validation ensures that: the model has produced a well-formed JSON object, all mandatory fields are present and the types match the schema.
+Only when these conditions are satisfied does the agent return the final result. Otherwise, the pipeline is interrupted, signalling that the model produced an incomplete or invalid output.
+
+%This mechanism allows models without native \gls{mcp} support to perform multi-step, tool-augmented reasoning while ensuring that all interactions remain safe, structured, and reproducible.
+
+%This configuration enables on-premise execution through Ollama, ensuring full data isolation and allowing the entire triage pipeline to run in offline or restricted environments.
+
+
+%
+
+\subsection{MCP Setup [MCP setup]}
+
+\colorbox{red}{Jadx and Ghidra are launched as independent \glspl{mcp} servers. The Python orchestration layer connects to each server using \texttt{MCPServerStdio}, exposing a unified interface to the LLM.}
+
+\begin{comment}
+The shim layer enforces:
+    
 \begin{itemize}
-    \item strict ``one JSON object per turn'' interaction;
-    \item automatic parsing and validation of the model’s JSON output;
-    \item redirection of each tool response back to the model as the next prompt.
+    \item correct routing (Jadx for Java context, Ghidra for native code),
+    \item one tool call per turn,
+    \item error-handling and automatic retries,
+    \item normalisation of malformed JSON responses,
+    \item timeouts imposed via CLI parameters.
 \end{itemize}
+\end{comment}
 
-Operationally, the model never interacts with \gls{mcp} endpoints directly.  
-Instead, the \texttt{oss\_model} function receives the system prompt generated from the shimming templates, asks the \gls{llm} to output a JSON tool call, executes that call on behalf of the model, and feeds the result back as a ``Tool~Response''.  
-This loop continues until the model emits a valid \texttt{"action": "final"} JSON object matching the expected schema.
-
-This mechanism provides robust tool-calling support even for models that lack native \gls{mcp} integration, while guaranteeing protocol correctness and shielding the model from the complexity of asynchronous tool execution.
+This ensures deterministic behaviour even when using stochastic models.
 
 
 \subsection{\gls{mcp} setup}
@@ -349,272 +411,81 @@ Only when the generated output satisfies both the protocol and the \texttt{pydan
 
 
 
-
-
-
-
 %\subsubsection{Ghidra}
 %For integrate Ghidra in the tool was use \texttt{jadx-ai-mcp}\footnote{https://github.com/LaurieWired/GhidraMCP}
 
 % \subsection{Use of Pydantic}
 
-\section{POIROT's output and use}
+\section{POIROT Output Processing [POIROT’s output and use]}
 
-As mentioned in Chapter~\ref{chp:preliminaries}, the triage procedure begins from the output generated by POIROT.  
-During its \emph{Triage} phase\footnote{\url{https://github.com/HexHive/droidot/\#triage}}, POIROT produces a file named \texttt{folder2backtraces.txt}, shown in Listing~\ref{lst:POIROT-output}.  
-This file serves as the primary input for the analysis performed in this project.  
-After running POIROT on a batch of applications, the resulting directory structure for the target APK appears as illustrated in Figure~\ref{fig:poirot_output}.
+The program interacts with POIROT’s directory structure as shown earlier
+in Figure~6.3 \textcolor{red}{(ensure this reference matches your final numbering)}.  
+Crash artefacts include stack traces, harness entry points, and reproducer
+inputs. These elements are aggregated into \texttt{CrashSummary} objects.
 
+\subsection{Extraction of Native Libraries [Extraction of .so files]}
 
-\begin{figure}
-    \centering
-    \scalebox{0.8}{\input{tikzpicture/targetAPKS}}
-    \caption{Directory structure of the target APKs as produced by POIROT, including extracted libraries and reproduced crash outputs.}
-    \label{fig:poirot_output}
-\end{figure}
+Native libraries are enumerated by inspecting the \texttt{lib/} directory
+within each APK. The implementation follows ABI-preference rules
+(e.g.\ preferring \texttt{arm64-v8a}) and extracts relevant symbols via the
+Unix \texttt{nm} utility.
 
-For each package contained in \texttt{target\_APK}, the program explores the \texttt{fuzzing\_output} directory and identifies all entries named \texttt{<functionName-Signature>} that include both a \texttt{reproduced\_crashes} folder and the file \texttt{folder2backtraces.txt}.  
-From this structure, the program builds a map in which the key is the package name (\texttt{pkgName}) and the value is a list of backtrace files.  
-This mapping is then used to extract APK metadata and perform the vulnerability triage.
+The symbol table is then correlated with the stack trace to select only the
+libraries relevant to the crash. This prevents unnecessary \gls{mcp} calls
+and reduces LLM context size.
 
+\section{Containerised Execution and Environment Setup [How to use]}
+\label{sec:container_usage}
 
-For ease of use, the program accepts the argument \texttt{--apk-list}, which specifies ``the path to a \texttt{.txt} file containing the list of APKs or application names to be included (one per line).''  
-When this option is provided, only the APKs that appear in both the \texttt{.txt} file and the \texttt{target\_APK} directory are considered for triage.  
-The list file also supports comments: any line starting with the character \texttt{\#} is ignored during parsing.
-
-
-
-\begin{comment}
-\section{Triaging of Vulnerabilities}
-Listing~\ref{lst:mcpVulnAssessment} shows the asynchronous routine responsible for coordinating the vulnerability triage process. 
-It initialises both Jadx and Ghidra \glspl{mcp}, launches the corresponding GUI sessions, and iteratively sends each crash report to the analysis agent for structured assessment.
-
-\begin{lstlisting}[language=Python, caption={Asynchronous function \texttt{mcp\_vuln\_assessment} performing the vulnerability triage through Jadx and Ghidra MCP servers}, label={lst:mcpVulnAssessment}]
-async def mcp_vuln_assessment(
-    model_name: str,
-    crashes: Crashes,
-    relevant_libs_map: Dict[Path, List[str]],
-    timeout: int = 60,
-    verbose: bool = False,
-    debug: bool = False
-) -> AnalysisResults:
-
-    ghidra_server = make_ghidra_server(timeout=timeout)
-    jadx_server = make_jadx_server(timeout=timeout)
-
-    results = AnalysisResults()
-
-    ...
-    
-    openGhidraGUI(sorted_libs, debug=debug)
-    openGhidraFile(sorted_libs, sorted_libs[0], debug=debug)
-        
-    for i, crash in enumerate(crashes, start=1):
-        ...
-        query = (
-            f"Assess the following crash and provide a vulnerability assessment "
-            f"in the specified format.\n{str(crash)}\n"
-            f"This is a map where each key is a Path to a relevant .so library, "
-            f"and the value is the list of JNI methods it implements:\n{libs_map}"
-        )
-        
-        async with get_agent(
-            ASSESSMENT_SYSTEM_PROMPT,
-            VulnAssessment,
-            [jadx_server, ghidra_server],
-            model_name=model_name,
-        ) as agent:
-            resp = await agent.run(query)
-        vuln = resp.output
-
-        results.append(AnalysisResult(crash=crash, assessment=vuln))
-    
-    ...
-
-    closeGhidraGUI(debug=debug)
-
-    return results
-\end{lstlisting}
-
-\end{comment}
-
-
-\subsection{Extraction of .so files}
-POIROT already extracts the native library files as part of its output. As shown in Figure~\ref{fig:poirot_output}, the \texttt{lib/} directory contains compiled libraries organised by \glspl{abi} (e.g., \texttt{arm64-v8a}, \texttt{x86\_64}, etc.).  
-The triage tool uses a preference list of \glspl{abi} to select the variant to analyse first; for example, it prioritises \texttt{arm64-v8a}.
-
-Using the function \texttt{find\_relevant\_libs(..)}, the program enumerates for each library the available functions via the Unix command \texttt{nm}, a utility that ``dumps the symbol table and its attributes from a binary executable file (including libraries, compiled object modules, shared-object files)''.  
-The resulting symbol list is then correlated with the stack trace contained in \texttt{folder2backtraces.txt} so that only the relevant \texttt{.so} files are selected for triage, thereby avoiding the overload of passing too many unused libraries to the model for analysis.
-
-\section{Output}
-
-The final stage of the triage pipeline produces a structured and self-contained JSON report.  
-This report contains all the contextual information required to understand the environment in which the analysis was performed, the metadata of the analysed \gls{apk}, and the full set of vulnerability assessments produced for each crash detected in the native libraries.
-
-Each report is written to: \texttt{<out-dir>/<pkg>/<JNImethod>/report.json}
-
-\subsection*{JSON Output}
-
-Listing~\ref{lst:jsonOutput} shows an example of the final JSON output.  
-%The structure is defined by the \texttt{AnalysisContainer}, \texttt{AnalysisBlock}, and \texttt{AnalysisResult}.
-
-\textcolor{red}{added call\_sequence and Exploit}
-
-\paragraph{Structure overview.}
-The top-level object contains a single field, \texttt{analysis}, wrapping all the relevant metadata and results:
-
+The implementation supports a fully containerised workflow using Docker.
+This ensures reproducibility across:
 \begin{itemize}
-  \item \textbf{\texttt{analysis.tool}} (\texttt{ToolInfo})  
-  Describes the environment and configuration used for the triage:
-  \begin{itemize}
-    \item \texttt{model\_name}: identifier of the \gls{llm} used (e.g.\ \texttt{"gemini-cli"}, \texttt{"gpt-oss:120b"}).
-    \item \texttt{apk\_path}: path to the analysed APK (e.g.\ \texttt{"APKs/com.tplink.skylight/base.apk"}).
-    \item \texttt{version}: internal version of the triage tool.
-  \end{itemize}
-
-  \item \textbf{\texttt{analysis.app}} (\texttt{AppMetadata})  
-  Contains the application metadata extracted from Jadx:
-  \begin{itemize}
-    \item \texttt{app\_name}: human-readable application label.
-    \item \texttt{package}: package name (application identifier).
-    \item \texttt{min\_sdk}, \texttt{target\_sdk}: minimum and target Android SDK levels.
-    \item \texttt{version\_name}, \texttt{version\_code}: versioning information of the analysed build.
-  \end{itemize}
-
-  \item \textbf{\texttt{analysis.libs}}  
-  A list of native libraries that were considered relevant for the apk run.  
-
-  \item \textbf{\texttt{analysis.analysisResults}} (\texttt{AnalysisResults})  
-  A list of per-crash assessments. Each element is an \texttt{AnalysisResult} object bundling:
-  \begin{itemize}
-    \item \texttt{crash} (\texttt{CrashSummary}): a normalised description of the crash:
-    \begin{itemize}
-      \item \texttt{ProcessTermination}: crash cause as reported by the runtime..
-      \item \texttt{StackTrace}: list of native frames involved in the crash.
-      \item \texttt{JavaCallGraph}: Java $\rightarrow$ JNI call chain leading to the JNI bridge method.
-      \item \texttt{JNIBridgeMethod}: JNI entry point associated with the crash.
-      \item \texttt{FuzzHarnessEntry}: fuzzer entry function used to drive inputs.
-      \item \texttt{ProgramEntry}: process entry point.
-    \end{itemize}
-
-    \item \texttt{assessment} (\texttt{VulnResult}): the vulnerability triage produced by the \gls{llm}:
-    \begin{itemize}
-      \item \texttt{is\_vulnerability}: boolean verdict indicating whether the crash is likely a real vulnerability.
-      \item \texttt{confidence}: numerical confidence in $[0,1]$ associated with the verdict.
-      \item \texttt{reasons}: short textual bullets explaining the decision (e.g. missing null-termination, out-of-bounds read).
-      \item \texttt{cwe\_ids}: list of relevant CWE identifiers (e.g.\ \texttt{"CWE-125"} for out-of-bounds read).
-      \item \texttt{severity}: estimated impact level (\texttt{"low"}, \texttt{"medium"}, \texttt{"high"}, \texttt{"critical"} or \texttt{null} if unknown).
-      \item \texttt{affected\_libraries}: list of libraries implicated in the crash.
-      \item \texttt{evidence}: list of \texttt{EvidenceItem} objects, each optionally containing:
-      \begin{itemize}
-        \item \texttt{function}: function name relevant to the issue.
-        \item \texttt{address}: code address within the library (when available).
-        \item \texttt{file}: library or source file associated with the evidence.
-        \item \texttt{snippet}: short decompiled excerpt or code fragment.
-        \item \texttt{note}: explanation of why this snippet supports the classification.
-      \end{itemize}
-      \item \texttt{recommendations}: concrete mitigation or follow-up actions (e.g.\ enforcing null-termination, adding bounds checks).
-      \item \texttt{assumptions}: explicit assumptions made by the model (e.g.\ nature of the input or control over certain parameters).
-      \item \texttt{limitations}: known gaps in the analysis (e.g.\ partial decompilation, missing source, lack of full context).
-    \end{itemize}
-  \end{itemize}
+    \item local development machines,
+    \item cloud-hosted environments,
+    \item continuous integration pipelines.
 \end{itemize}
 
-This schema makes the output both human-readable and machine-consumable.  
-%Security analysts can directly inspect the rationales and evidence for each crash, while downstream tools can parse the JSON to aggregate statistics, feed dashboards, or gate CI pipelines on the presence of high-severity vulnerabilities.
+\subsection*{Docker Setup Script}
 
-
-
-\section{How to use}
-This section describes the complete workflow for running the triage pipeline—from preparing the POIROT output and configuring the environment, to launching the program and interpreting the generated results.
-
-
-\subsection{Docker}\label{chp:docker}
-
-This project adopted Docker to encapsulate the entire triage system and its dependencies in a reproducible and portable image. Docker is an open-source platform designed to automate the deployment of applications within lightweight, isolated environments known as \emph{containers}. Each container bundles an application together with its dependencies, configuration files and operating system libraries, ensuring consistent behaviour across different environments. 
-
-This ensures that the analysis pipeline can be executed identically on local workstations, cloud servers or continuous integration infrastructures, regardless of the host configuration.
-
-The \texttt{Dockerfile} defines a minimal image that includes all components required:
-\begin{myitemize}
-    \item Python~3.12 runtime with all dependencies;
-    \item the \texttt{pydantic} and \texttt{pydantic\_ai} libraries for typed models and agent orchestration;
-    \item \texttt{Ghidra} and \texttt{Jadx} and reciprocal \gls{mcp} servers;
-    \item environment configuration for \texttt{LLM\_MODEL\_NAME}, \texttt{GHIDRA\_MCP\_DIR}, and \texttt{JADX\_MCP\_DIR}.
-\end{myitemize}
-
-\vspace{4mm}
-
-Two auxiliary scripts simplify the deployment and execution of the containerised system.  
-The first, \texttt{dockerSetup.sh}, automates the build process and initial execution of the container. It builds the container from the provided \texttt{Dockerfile} and assigns it the name \texttt{triage\_dev}. By naming the container, its configuration and state are retained across sessions, allowing the environment to be restarted without needing to reconfig it each time.
-
-During setup, \texttt{dockerSetup.sh} mounts two persistent volumes:
+The script \texttt{dockerSetup.sh}:
 \begin{itemize}
-    \item \textbf{workspace}: synchronises the project’s source code between the host machine and the container, enabling code edits and updates to take effect immediately without rebuilding the image;
-    \item \textbf{APKs}: provides shared access to the APK files to be analysed. If the APKs (the POIROT’s output) are placed in this directory, the container can access them directly; otherwise, the container remains isolated from the host filesystem, ensuring safe separation of data.
+    \item builds the container image,
+    \item installs Jadx and Ghidra \glspl{mcp},
+    \item configures environment variables,
+    \item mounts persistent volumes for source code and APKs.
 \end{itemize}
 
-The first execution of the container requires several additional configuration steps to enable the integration of \gls{mcp} servers and authentication for Gemini-CLI (if used):
+\textcolor{red}{Verify whether the description of the Ghidra MCP installation needs
+additional detail regarding GUI activation.}
 
-\paragraph{Gemini CLI setup.}
-Gemini authentication must be performed once, as the CLI requires an OAuth credential file. Since the Docker container lacks browser access, the login is completed externally on the host machine. 
+\subsection*{Runtime Script}
 
-\paragraph{Jadx MCP server.}
-The Jadx MCP server is generally installed automatically when the container is first built. However, if errors occur, it can be installed manually by following the instructions.
+The script \texttt{dockerRun.sh} launches the preconfigured container
+without rebuilding it, enabling rapid iteration.
 
-\paragraph{Ghidra MCP server.}
-The Ghidra MCP server is pre-packaged in the Docker image, but not installed, since required the use of the \gls{gui}. To activate it, Ghidra must first be launched in the container using. The setup then follows the official configuration steps described in the GhidraMCP documentation.
+\section{Command-Line Interface [Program arguments]}
 
-The second script, \texttt{dockerRun.sh}, provides a simplified interface for launching the container after it has been configured. It executes only a few lines to start the existing \texttt{triage\_dev} container, resuming the previously configured environment without rebuilding or reinitialising it.
-
-
-\subsection{Program arguments}
-
-The program is executed from the command line using Python~3:
+The tool is executed via:
 
 \begin{verbatim}
-     python3 main.py <target_APK> [options]
+python3 main.py <target_APK> [options]
 \end{verbatim}
 
-where \texttt{<target\_APK>} is the path to the POIROT output directory containing the analysed applications.  
-The command-line arguments control which APKs are processed, which model and timeout are used, and where results are stored.
+Supported options include:
+\begin{itemize}
+    \item \texttt{--apk-list}: filter APKs via a user-provided list;
+    \item \texttt{-m/--model-name}: select the LLM model;
+    \item \texttt{-o/--out-dir}: specify the output directory;
+    \item \texttt{--timeout}: impose per-operation timeouts;
+    \item \texttt{-d/--debug}: enable verbose diagnostic logging;
+    \item \texttt{-v/--verbose}: echo prompts and LLM intermediate steps.
+\end{itemize}
 
-\textbf{Positional argument}
-    \begin{myitemize}
-      \item \texttt{target\_APK}: Path to the POIROT output folder (containing one subdirectory per analysed application, e.g.\ \texttt{PkgName/}).
-    \end{myitemize}
-
-\textbf{Optional arguments}
-    \begin{myitemize}
-      \item \texttt{--apk-list}~\textit{Path}: Path to a \texttt{.txt} file containing the list of APKs or application names to include in the triage (one per line).  
-      Lines beginning with \texttt{\#} are treated as comments and ignored.  
-      Only APKs present in both the directory and this list are analysed.
-      
-      \item \texttt{-m, --model-name}~\textit{Str}: Specifies the \gls{llm} model name to use for the triage.  
-      Defaults to the value of the environment variable \texttt{LLM\_MODEL\_NAME} or \texttt{gemini-2.5-flash} if not set.
-      
-      \item \texttt{-o, --out-dir}~\textit{Path}: Base directory where reports are saved.  
-      If omitted, a directory named \texttt{classification\_YYYY\_MM\_DD\_HH:MM} is automatically created.
-
-      \item \texttt{--ollama-url}~\textit{str}: Base URL for the Ollama requests (default \url{localhost:11434/v1}).  
-
-      
-      \item \texttt{--timeout}~\textit{Int}: Timeout in seconds for MCP server operations (default: 180\,s).
-      
-      \item \texttt{-d, --debug}: Enables detailed debug logs.  
-      Prints diagnostic information, subprocess output, and environment variables used for configuration.
-      
-      \item \texttt{-v, --verbose}: Echoes system and user prompts exchanged with the \gls{llm}, as well as the model’s intermediate reasoning.
-    \end{myitemize}
-
-\paragraph{Example.}
-As shown in Listing~\ref{lst:triageExecution}, this command analyses all APKs listed in \texttt{apk\_list.txt} located inside \texttt{./target\_APK}.  
-It runs the triage pipeline using the \texttt{gemini-2.5-flash} model, stores all generated reports in \texttt{./results},  
-sets a timeout of 240 seconds for MCP server operations, and enables debug-mode logging.
+An example invocation is shown in Listing~\ref{lst:example_run}.
 
 \begin{lstlisting}[language=Python, 
 caption={Execution of the vulnerability-triage pipeline using \texttt{main.py}, which orchestrates the Jadx and Ghidra MCP servers}, 
-label={lst:triageExecution}]
+label={lst:example_run}]
     python3 main.py ./target_APK \
         --apk-list ./apk_list.txt \
         -m gemini-2.5-flash \

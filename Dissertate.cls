@@ -464,6 +464,12 @@
     morekeywords=[2]{run},
 }
 
+\lstdefinelanguage{pseudoCode}[]{Python}{
+    deletekeywords={with},
+    morekeywords={loop, query, execute_tool, validate_and_extract_JSON, ShimmingAgent},
+    morekeywords=[2]{prompt, history, json},
+    morekeywords=[3]{model},
+}
 \lstdefinelanguage{pyPrompt}[]{Python}{
     deletekeywords={for, any, in, not, or, if, and},
     morekeywords={system_prompt, user_prompt, response_str},

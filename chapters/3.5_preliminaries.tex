@@ -62,6 +62,7 @@ Listing~\ref{lst:POIROT-output} shows two representative crashes produced when f
 
 Each POIROT crash record stores the full stack trace (as shown in Listing~\ref{lst:POIROT-output}), from which it is possible to extract the native function name, the JNI entry point, and the likely cause of the crash.
 
+Each method crash is stored in its own file within a unique directory named with the corresponding method. The \textit{Triage} section\footnote{\url{https://github.com/HexHive/droidot/\#triage}} of the GitHub README provides an example of the directory structure used for a crash.
 %From a data perspective, each POIROT crash record stores: (i) the full stack trace (as in the listing), (ii) the native symbol or offset for the site nearest to the failure, (iii) the JNI entry point and the managed call sequence used by the harness, and (iv) the minimised input that reproduces the failure \cite{poirot-usenix25,poirot-usenix25-appendix}. \textcolor{red}{DA CONTROLLARE}
 
 \begin{lstlisting}[caption={Output of POIROT of apk \texttt{com.tplink.skylight} in the function \texttt{Java\_com\_tplink\_skylight\_common\_jni\_MP4Encoder\_packVideo} }, label={lst:POIROT-output}]

@@ -48,7 +48,7 @@ public class foo {
 }
 \end{lstlisting}
 
-\begin{lstlisting}[language=C+JNI, caption={Native implementation of \texttt{bar}}, label={lst:JNI}]
+\begin{lstlisting}[language=C+JNI, caption={Native implementation of \texttt{bar}\\The native function name \texttt{Java\_pkg\_foo\_bar} follows the JNI name-mangling convention: it is composed of the prefix \texttt{Java\_}, the fully qualified class name (\texttt{pkg.foo}, with dots replaced by underscores), and the Java method name \texttt{bar}, thus uniquely identifying the native implementation of \texttt{foo::bar(int,String)}.}, label={lst:JNI}]
 jdouble Java_pkg_foo_bar(JNIEnv *env,          // ptr to JNI interface
                          jobject obj,          // "this" pointer
                          jint i, jstring s) {  // first and second parameter
