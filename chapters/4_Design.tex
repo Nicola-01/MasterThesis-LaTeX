@@ -290,3 +290,85 @@ The shimming layer transforms a general-purpose \gls{llm} into an evidence-drive
 Rather than weakening or constraining the model, the shim amplifies its reliability by aligning its behaviour with deterministic protocol rules. In practice, this hybrid architecture---LLM reasoning combined with protocol-level enforcement---provides the benefits of a classical static-analysis pipeline while retaining the adaptability and interpretative strengths of a large language model.
 
 \end{comment}
+
+\section{Output Structure}
+
+The final stage of the triage pipeline produces a structured and self-contained JSON report.  
+This report contains all the contextual information required to understand the environment in which the analysis was performed, the metadata of the analysed \gls{apk}, and the full set of vulnerability assessments produced for each crash detected in the native libraries.
+
+Each report is written to: \texttt{<out-dir>/<pkg>/<JNImethod>/report.json}
+
+Listing~\ref{lst:jsonOutput} shows an example of the final JSON output.  
+%The structure is defined by the \texttt{AnalysisContainer}, \texttt{AnalysisBlock}, and \texttt{AnalysisResult}.
+
+\paragraph{Structure overview.}
+The top-level object contains a single field, \texttt{analysis}, wrapping all the relevant metadata and results:
+
+\begin{itemize}
+  \item \textbf{\texttt{analysis.tool}} (\texttt{ToolInfo})  
+  Describes the environment and configuration used for the triage:
+  \begin{itemize}
+    \item \texttt{model\_name}: identifier of the \gls{llm} used (e.g.\ \texttt{"gemini-cli"}, \texttt{"gpt-oss:120b"}).
+    \item \texttt{apk\_path}: path to the analysed APK (e.g.\ \texttt{"APKs/com.tplink.skylight/base.apk"}).
+    \item \texttt{version}: internal version of the triage tool.
+  \end{itemize}
+
+  \item \textbf{\texttt{analysis.app}} (\texttt{AppMetadata})  
+  Contains the application metadata extracted from Jadx:
+  \begin{itemize}
+    \item \texttt{app\_name}: human-readable application label.
+    \item \texttt{package}: package name (application identifier).
+    \item \texttt{min\_sdk}, \texttt{target\_sdk}: minimum and target Android SDK levels.
+    \item \texttt{version\_name}, \texttt{version\_code}: versioning information of the analysed build.
+  \end{itemize}
+
+  \item \textbf{\texttt{analysis.analysisResults}} (\texttt{AnalysisResults})  
+  A list of per-crash assessments. Each element is an \texttt{AnalysisResult} object bundling:
+  \begin{itemize}
+    \item \texttt{crash} (\texttt{CrashSummary}): a normalised description of the crash:
+    \begin{itemize}
+      \item \texttt{ProcessTermination}: crash cause as reported by the runtime..
+      \item \texttt{StackTrace}: list of native frames involved in the crash.
+      \item \texttt{JavaCallGraph}: Java $\rightarrow$ JNI call chain leading to the JNI bridge method.
+      \item \texttt{JNIBridgeMethod}: JNI entry point associated with the crash.
+      \item \texttt{JavaCallGraph}: Java call chain leading to the JNI method.
+      \item \texttt{FuzzHarnessEntry}: fuzzer entry function used to drive inputs.
+      \item \texttt{ProgramEntry}: process entry point.
+      \item \texttt{LibMap}: native libraries involved in the crash.
+
+    \end{itemize}
+
+    \item \texttt{assessment} (\texttt{VulnResult}): the vulnerability triage produced by the \gls{llm}:
+    \begin{itemize}
+      \item \texttt{chain\_of\_thought}: a list of strings representing the step-by-step monologue that LLM thinks through before classifying.
+      \item \texttt{is\_vulnerability}: boolean verdict indicating whether the crash is likely a real vulnerability.
+      \item \texttt{confidence}: numerical confidence in $[0,1]$ associated with the verdict.
+      \item \texttt{reasons}: short textual bullets explaining the decision (e.g. missing null-termination, out-of-bounds read).
+      \item \texttt{cwe\_ids}: list of relevant CWE identifiers (e.g.\ \texttt{"CWE-125"} for out-of-bounds read).
+      \item \texttt{severity}: estimated impact level (\texttt{"low"}, \texttt{"medium"}, \texttt{"high"}, \texttt{"critical"} or \texttt{null} if unknown).
+      \item \texttt{affected\_libraries}: list of libraries implicated in the crash.
+      \item \texttt{recommendations}: concrete mitigation or follow-up actions (e.g.\ enforcing null-termination, adding bounds checks).
+      \item \texttt{assumptions}: explicit assumptions made by the model (e.g.\ nature of the input or control over certain parameters).
+      \item \texttt{limitations}: known gaps in the analysis (e.g.\ partial decompilation, missing source, lack of full context).
+      \item \texttt{evidence}: list of \texttt{EvidenceItem} objects, each optionally containing:
+        \begin{itemize}
+            \item \texttt{function}: function name relevant to the issue.
+            \item \texttt{address}: code address within the library (when available).
+            \item \texttt{file}: library or source file associated with the evidence.
+            \item \texttt{snippet}: short decompiled excerpt or code fragment.
+            \item \texttt{note}: explanation of why this snippet supports the classification
+        \end{itemize}
+
+       \item \texttt{Statistics}: basic metrics on the analysis.
+        \begin{itemize}
+            \item \texttt{time}: total analysis time.
+            \item \texttt{llm\_requests}: number of LLM requests.
+            \item \texttt{llm\_tool\_calls}: number of MCP tool calls.
+            \item \texttt{input\_tokens}: tokens sent to the LLM.
+            \item \texttt{output\_tokens}: tokens produced by the LLM.
+        \end{itemize}
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+
+This schema makes the output both human-readable and machine-consumable. 
