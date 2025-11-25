@@ -78,34 +78,34 @@ The total time per APK depends primarily on the \emph{number of crashes} produce
 \resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l||l|l|}
 \hline
-\multicolumn{4}{|c|}{\textbf{Execution Time per Application}} \\
+\multicolumn{4}{|c|}{\textbf{Execution LLM Time per Application}} \\
 \hline
 \textbf{App} & \textbf{Time (s)} & \textbf{App} & \textbf{Time (s)} \\
 \hline
-br.com.pedidos10 & TIME & ca.radioplayer.android & TIME \\
-com.ahnlab.v3mobileplus & TIME & com.appgeneration.itunerfree & TIME \\
-com.cisco.webex.meetings & TIME & com.clearchannel.iheartradio.controller & TIME \\
-com.ford.fordpasseu & TIME & com.hyundaicard.cultureapp & TIME \\
-com.intsig.BCRLite & TIME & com.jeju.genie & TIME \\
-com.kbstar.kbbridge & TIME & com.kt.ktauth & TIME \\
-com.lottemembers.android & TIME & com.more.dayzsurvival.gp & TIME \\
-com.pandora.android & TIME & com.rockbite.deeptown & TIME \\
-com.rstgames.durak & TIME & com.samsungcard.shopping & TIME \\
-com.skmc.okcashbag.home\_google & TIME & com.skt.prod.dialer & TIME \\
-com.skt.smartbill & TIME & com.sopheos.videgreniersmobile & TIME \\
-com.ssg.serviceapp.android.egiftcertificate & TIME & com.teamjin.deliveryk & TIME \\
-com.tencent.mm & TIME & com.tplink.skylight & TIME \\
-fr.radioplayer.android & TIME & kr.co.busanbank.mbp & TIME \\
-kr.co.morpheus.geps & TIME & kr.co.samsungcard.mpocket & TIME \\
-kr.go.iros & TIME & kr.go.kcs.mobile.pubservice & TIME \\
-kr.go.minwon.m & TIME & kr.go.nts.android & TIME \\
-kr.go.wetax.android & TIME & nh.smart.allonebank & TIME \\
-nh.smart.banking & TIME & nh.smart.card & TIME \\
-nh.smart.nhcok & TIME & ragazzo.alphacode.com.br & TIME \\
-tw.com.taishinbank.ccapp & TIME & tw.gov.tra.twtraffic & TIME \\
+br.com.pedidos10 & 80 & ca.radioplayer.android & 480 \\ 
+com.ahnlab.v3mobileplus & 338 & com.appgeneration.itunerfree & 113 \\ 
+com.cisco.webex.meetings & 129 & com.clearchannel.iheartradio.controller & 200 \\ 
+com.ford.fordpasseu & 185 & com.hyundaicard.cultureapp & 31 \\ 
+com.intsig.BCRLite & 59 & com.jeju.genie & 0 \\ 
+com.kbstar.kbbridge & 0 & com.kt.ktauth & 30 \\ 
+com.lottemembers.android & 71 & com.more.dayzsurvival.gp & 0 \\ 
+com.pandora.android & 420 & com.rockbite.deeptown & 17 \\ 
+com.rstgames.durak & 49 & com.samsungcard.shopping & 0 \\ 
+com.skmc.okcashbag.home\_google & 26 & com.skt.prod.dialer & 278 \\ 
+com.skt.smartbill & 196 & com.sopheos.videgreniersmobile & 60 \\ 
+com.ssg.serviceapp.android.egiftcertificate & 0 & com.teamjin.deliveryk & 83 \\ 
+com.tencent.mm & 199 & com.tplink.skylight & 71 \\ 
+fr.radioplayer.android & 628 & kr.co.busanbank.mbp & 403 \\ 
+kr.co.morpheus.geps & 59 & kr.co.samsungcard.mpocket & 53 \\ 
+kr.go.iros & 0 & kr.go.kcs.mobile.pubservice & 0 \\ 
+kr.go.minwon.m & 30 & kr.go.nts.android & 67 \\ 
+kr.go.wetax.android & 0 & nh.smart.allonebank & 0 \\ 
+nh.smart.banking & 0 & nh.smart.card & 30 \\ 
+nh.smart.nhcok & 0 & ragazzo.alphacode.com.br & 87 \\ 
+tw.com.taishinbank.ccapp & 98 & tw.gov.tra.twtraffic & 78 \\ 
 \hline
 \hline
-\multicolumn{2}{|r||}{\textbf{Average Time}} & \multicolumn{2}{l|}{\textbf{AVG}} \\
+\multicolumn{2}{|r||}{\textbf{Average Time}} & \multicolumn{2}{l|}{\textbf{232.4}} \\
 \hline
 \end{tabular}
 }
@@ -114,6 +114,8 @@ tw.com.taishinbank.ccapp & TIME & tw.gov.tra.twtraffic & TIME \\
 \end{table}
 
 \section{\gls{llm} Usage}
+
+\subsection{Tokens}
 
 \glspl{llm}, when accessed through their cloud \glspl{api}, compute usage costs based on the number of \emph{input tokens} (the prompt sent to the model) and \emph{output tokens} (the generated response).  
 Token consumption plays a central role in both performance and cost, and is influenced by several factors:
@@ -140,39 +142,91 @@ Table~\ref{tab:apps_tokens} reports input and output token usage for each applic
 \textbf{App} & \textbf{Input} & \textbf{Output} &
 \textbf{App} & \textbf{Input} & \textbf{Output} \\
 \hline
-br.com.pedidos10 & NTokens & NTokens & ca.radioplayer.android & NTokens & NTokens \\
-com.ahnlab.v3mobileplus & NTokens & NTokens & com.appgeneration.itunerfree & NTokens & NTokens \\
-com.cisco.webex.meetings & NTokens & NTokens & com.clearchannel.iheartradio.controller & NTokens & NTokens \\
-com.ford.fordpasseu & NTokens & NTokens & com.hyundaicard.cultureapp & NTokens & NTokens \\
-com.intsig.BCRLite & NTokens & NTokens & com.jeju.genie & NTokens & NTokens \\
-com.kbstar.kbbridge & NTokens & NTokens & com.kt.ktauth & NTokens & NTokens \\
-com.lottemembers.android & NTokens & NTokens & com.more.dayzsurvival.gp & NTokens & NTokens \\
-com.pandora.android & NTokens & NTokens & com.rockbite.deeptown & NTokens & NTokens \\
-com.rstgames.durak & NTokens & NTokens & com.samsungcard.shopping & NTokens & NTokens \\
-com.skmc.okcashbag.home\_google & NTokens & NTokens & com.skt.prod.dialer & NTokens & NTokens \\
-com.skt.smartbill & NTokens & NTokens & com.sopheos.videgreniersmobile & NTokens & NTokens \\
-com.ssg.serviceapp.android.egiftcertificate & NTokens & NTokens & com.teamjin.deliveryk & NTokens & NTokens \\
-com.tencent.mm & NTokens & NTokens & com.tplink.skylight & NTokens & NTokens \\
-fr.radioplayer.android & NTokens & NTokens & kr.co.busanbank.mbp & NTokens & NTokens \\
-kr.co.morpheus.geps & NTokens & NTokens & kr.co.samsungcard.mpocket & NTokens & NTokens \\
-kr.go.iros & NTokens & NTokens & kr.go.kcs.mobile.pubservice & NTokens & NTokens \\
-kr.go.minwon.m & NTokens & NTokens & kr.go.nts.android & NTokens & NTokens \\
-kr.go.wetax.android & NTokens & NTokens & nh.smart.allonebank & NTokens & NTokens \\
-nh.smart.banking & NTokens & NTokens & nh.smart.card & NTokens & NTokens \\
-nh.smart.nhcok & NTokens & NTokens & ragazzo.alphacode.com.br & NTokens & NTokens \\
-tw.com.taishinbank.ccapp & NTokens & NTokens & tw.gov.tra.twtraffic & NTokens & NTokens \\
+br.com.pedidos10 & 36344 & 4006 & ca.radioplayer.android & 494465 & 23484 \\ 
+com.ahnlab.v3mobileplus & 392719 & 17831 & com.appgeneration.itunerfree & 53776 & 6516 \\ 
+com.cisco.webex.meetings & 92548 & 7643 & com.clearchannel.iheartradio.controller & 151439 & 7039 \\ 
+com.ford.fordpasseu & 84360 & 6811 & com.hyundaicard.cultureapp & 14113 & 1642 \\ 
+com.intsig.BCRLite & 33230 & 4095 & com.jeju.genie & 0 & 0 \\ 
+com.kbstar.kbbridge & 0 & 0 & com.kt.ktauth & 14265 & 2262 \\ 
+com.lottemembers.android & 38747 & 2655 & com.more.dayzsurvival.gp & 0 & 0 \\ 
+com.pandora.android & 70891 & 9638 & com.rockbite.deeptown & 6564 & 1421 \\ 
+com.rstgames.durak & 56718 & 3376 & com.samsungcard.shopping & 0 & 0 \\ 
+com.skmc.okcashbag.home\_google & 29282 & 1096 & com.skt.prod.dialer & 212223 & 12100 \\ 
+com.skt.smartbill & 166934 & 10359 & com.sopheos.videgreniersmobile & 48392 & 3213 \\ 
+com.ssg.serviceapp.android.egiftcertificate & 0 & 0 & com.teamjin.deliveryk & 31816 & 4143 \\ 
+com.tencent.mm & 59455 & 13784 & com.tplink.skylight & 29527 & 4077 \\ 
+fr.radioplayer.android & 202292 & 21668 & kr.co.busanbank.mbp & 226538 & 19492 \\ 
+kr.co.morpheus.geps & 22248 & 1544 & kr.co.samsungcard.mpocket & 15476 & 1654 \\ 
+kr.go.iros & 0 & 0 & kr.go.kcs.mobile.pubservice & 0 & 0 \\ 
+kr.go.minwon.m & 14516 & 1378 & kr.go.nts.android & 40624 & 3648 \\ 
+kr.go.wetax.android & 0 & 0 & nh.smart.allonebank & 0 & 0 \\ 
+nh.smart.banking & 0 & 0 & nh.smart.card & 14111 & 1783 \\ 
+nh.smart.nhcok & 0 & 0 & ragazzo.alphacode.com.br & 38671 & 3792 \\ 
+tw.com.taishinbank.ccapp & 31781 & 4205 & tw.gov.tra.twtraffic & 42834 & 3530 \\ 
 \hline
 \hline
 \multicolumn{3}{|r||}{\textbf{Average Input Tokens}} &
-\multicolumn{3}{l|}{\textbf{AVG}} \\
+\multicolumn{3}{l|}{\textbf{138345}} \\
 \multicolumn{3}{|r||}{\textbf{Average Output Tokens}} &
-\multicolumn{3}{l|}{\textbf{AVG}} \\
+\multicolumn{3}{l|}{\textbf{10495}} \\
 \hline
 \end{tabular}
 }
 \caption{Input and output token usage per application.}
 \label{tab:apps_tokens}
 \end{table}
+
+\subsection{Request}
+
+\textcolor{red}{Spiegazioen llm request e llm tool calls}
+        %"llm_requests": 0,
+        %"llm_tool_calls": 0,
+
+
+\begin{table}[ht]
+\centering
+\resizebox{1\textwidth}{!}{
+\begin{tabular}{|l|l|l||l|l|l|}
+\hline
+\multicolumn{6}{|c|}{\textbf{Token Usage per Application}} \\
+\hline
+\textbf{App} & \textbf{Input} & \textbf{Output} &
+\textbf{App} & \textbf{Input} & \textbf{Output} \\
+\hline
+br.com.pedidos10 & 5 & 9 & ca.radioplayer.android & 54 & 73 \\ 
+com.ahnlab.v3mobileplus & 31 & 42 & com.appgeneration.itunerfree & 6 & 14 \\ 
+com.cisco.webex.meetings & 10 & 23 & com.clearchannel.iheartradio.controller & 17 & 20 \\ 
+com.ford.fordpasseu & 9 & 26 & com.hyundaicard.cultureapp & 2 & 3 \\ 
+com.intsig.BCRLite & 4 & 9 & com.jeju.genie & 0 & 0 \\ 
+com.kbstar.kbbridge & 0 & 0 & com.kt.ktauth & 2 & 3 \\ 
+com.lottemembers.android & 2 & 5 & com.more.dayzsurvival.gp & 0 & 0 \\ 
+com.pandora.android & 8 & 20 & com.rockbite.deeptown & 1 & 0 \\ 
+com.rstgames.durak & 7 & 6 & com.samsungcard.shopping & 0 & 0 \\ 
+com.skmc.okcashbag.home\_google & 4 & 3 & com.skt.prod.dialer & 26 & 26 \\ 
+com.skt.smartbill & 21 & 27 & com.sopheos.videgreniersmobile & 6 & 10 \\ 
+com.ssg.serviceapp.android.egiftcertificate & 0 & 0 & com.teamjin.deliveryk & 4 & 9 \\ 
+com.tencent.mm & 36 & 29 & com.tplink.skylight & 4 & 9 \\ 
+fr.radioplayer.android & 22 & 59 & kr.co.busanbank.mbp & 19 & 44 \\ 
+kr.co.morpheus.geps & 3 & 4 & kr.co.samsungcard.mpocket & 2 & 5 \\ 
+kr.go.iros & 0 & 0 & kr.go.kcs.mobile.pubservice & 0 & 0 \\ 
+kr.go.minwon.m & 2 & 4 & kr.go.nts.android & 5 & 11 \\ 
+kr.go.wetax.android & 0 & 0 & nh.smart.allonebank & 0 & 0 \\ 
+nh.smart.banking & 0 & 0 & nh.smart.card & 2 & 3 \\ 
+nh.smart.nhcok & 0 & 0 & ragazzo.alphacode.com.br & 5 & 13 \\ 
+tw.com.taishinbank.ccapp & 4 & 10 & tw.gov.tra.twtraffic & 5 & 13 \\ 
+\hline
+\hline
+\multicolumn{3}{|r||}{\textbf{Average LLM requests}} &
+\multicolumn{3}{l|}{\textbf{16.4}} \\
+\multicolumn{3}{|r||}{\textbf{Average LLM Tool Calls}} &
+\multicolumn{3}{l|}{\textbf{26.6}} \\
+\hline
+\end{tabular}
+}
+\caption{Input and output token usage per application.}
+\label{tab:apps_tokens}
+\end{table}
+        
 
 \subsubsection{Evaluation Metrics}
 
