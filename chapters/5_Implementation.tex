@@ -257,16 +257,29 @@ appMetadata: AppMetadata = j_meta.output
 \end{lstlisting}
 
 \paragraph{\texttt{jadx-ai-mcp} tools.}
-The \gls{mcp} server exposes a set of structured tools that allow the agent to query, explore, and manipulate the currently opened Jadx project.  
-The tools provaided are:
-\begin{myitemize}
-  \item \texttt{get\_android\_manifest}, \texttt{get\_main\_activity\_class}, \\\texttt{get\_main\_application\_classes\_names}/\texttt{\_code}: recover app entry points and context.
-  \item \texttt{get\_all\_classes}, \texttt{get\_class\_source}, \texttt{get\_methods\_of\_class}, \texttt{get\_method\_by\_name}: class/method discovery and source retrieval.
-  \item \texttt{search\_method\_by\_name}, \texttt{get\_smali\_of\_class}: locate JNI bridges and low-level details.
-  \item \texttt{get\_all\_resource\_file\_names}, \texttt{get\_resource\_file}, \texttt{get\_strings}: resource inspection for configuration-driven behaviours.
-  \item \texttt{fetch\_current\_class}, \texttt{get\_selected\_text}: GUI-assisted context capture during investigations.
-  \item \texttt{rename\_class}/\texttt{rename\_method}/\texttt{rename\_field}: optional refactoring to improve readability (kept out of formal evidence).
-\end{myitemize}
+
+\paragraph{\texttt{jadx-ai-mcp} tools.}
+The Jadx \gls{mcp} server provides several groups of tools that allow the agent to inspect and navigate the Java and Android components of the application:
+
+\begin{itemize}
+    \item \textbf{Manifest and Entry-Point Retrieval:}  
+    Extract information from the Android manifest and identify key components such as activities, application classes, and initial entry points.
+
+    \item \textbf{Class and Method Inspection:}  
+    Explore the full set of classes, access source code, and inspect methods, enabling structural analysis of the Java layer.
+
+    \item \textbf{Search and Low-Level Views:}  
+    Locate methods by name—including JNI bridge functions—and retrieve Smali representations for low-level inspection.
+
+    \item \textbf{Resource Access:}  
+    Retrieve resources, configuration files, and embedded strings, useful for understanding app behaviour or identifying protocol- or input-related logic.
+
+    \item \textbf{GUI-Assisted Context Capture:}  
+    Interact with elements currently selected in the Jadx GUI, allowing the agent to access context-sensitive views during analysis.
+
+    \item \textbf{Refactoring Utilities:}  
+    Optional renaming tools that improve readability within Jadx without affecting the underlying binary or the evidence used for the final report.
+\end{itemize}
 
 \subsubsection{Ghidra}
 
@@ -297,19 +310,24 @@ To address this limitation, the base \texttt{GhidraMCP} implementation was exten
 
 \begin{itemize}
 
-    \item \texttt{list\_available\_libs()}\\
+    \item \texttt{list\_available\_libs()}:
     Returns the list of all native libraries currently imported into the Ghidra project.  
-    This method allows the triage agent to discover which binaries can be analysed before issuing analysis-related tool calls.  
-    It is particularly useful for verifying whether a specific library is already available or whether a new import operation is required.
+    %Allows the triage agent to discover which binaries can be analysed before issuing analysis-related tool calls.  
+    %It is particularly useful for verifying whether a specific library is already available or whether a new import operation is required.
     
-    \item \texttt{get\_current\_lib\_name()}\\
+    \item \texttt{get\_current\_lib\_name()}:
     Identifies the library that is currently open in the Ghidra CodeBrowser and therefore exposed through the MCP server.  
-    This method ensures that analysis actions (e.g.\ decompilation, symbol lookups) are performed on the correct binary and that the context aligns with the LLM’s expectations.
+    %This method ensures that analysis actions (e.g.\ decompilation, symbol lookups) are performed on the correct binary and that the context aligns with the LLM’s expectations.
     
-    \item \texttt{open\_lib(lib\_name: str)}\\
+    \item \texttt{open\_lib(lib\_name: str)}:
     Switches the active view in the CodeBrowser to the specified library.  
-    The name must match one of the entries returned by \texttt{list\_available\_libs()}.  
-    This operation does not trigger analysis itself: it merely brings the selected binary into focus so that subsequent MCP calls operate on the intended file.
+    %The name must match one of the entries returned by \texttt{list\_available\_libs()}.  
+    This operation brings the selected binary into focus so that subsequent MCP calls operate on the intended file.
+
+    \item \texttt{open\_external\_method(method\_name: str)}:
+    Allows the agent to analyse methods that reside in libraries not currently loaded into Ghidra.
+    When invoked, this function closes the active Ghidra GUI instance, identifies the native library that defines the requested method, and reopens Ghidra with that library included among the imported files.  
+    This ensures that the \gls{llm} can retrieve code and metadata for methods located outside the initially loaded set of libraries, without requiring manual intervention.
 
 \end{itemize}
 
@@ -356,7 +374,7 @@ The helper then brings the \gls{gui} to the foreground and completes the import 
 A built-in timeout ensures that the Ghidra environment is properly initialised before the analysis continues.
 
 \end{comment}
-
+\hfill \break
 Once the Ghidra \gls{gui} environment is ready, the triage agent establishes communication with the Ghidra \gls{mcp} server through the \texttt{make\_ghidra\_server()} function defined in \texttt{ghidraMCP.py}.  
 
 \begin{comment}
@@ -385,8 +403,27 @@ Listing~\ref{lst:mcpVulnAssessment} shows the use of \texttt{jadx-ai-mcp} and \t
 
 
 \paragraph{\texttt{GhidraMCP} tools.}
-The Ghidra \gls{mcp} server exposes a variety of analysis and decompilation tools accessible to the triage agent through structured \gls{mcp} calls.  
-The main capabilities exposed through the server are:
+The Ghidra \gls{mcp} server exposes several groups of analysis capabilities that the triage agent can invoke during native-code inspection:
+
+\begin{itemize}
+    \item \textbf{Decompilation and Disassembly:}  
+    Provide low-level assembly views and high-level decompiled C-like code, enabling the agent to inspect function bodies and reconstruct program behaviour.
+
+    \item \textbf{Function and Address Queries:}  
+    Allow the agent to retrieve functions, addresses, and cross-references, making it possible to trace control flow and understand how different parts of the binary interact.
+
+    \item \textbf{Listing and Enumeration:}  
+    Return structured listings of functions, classes, symbols, segments, strings, and other program components, giving the agent a global overview of the binary.
+
+    \item \textbf{Search and Cross-References:}  
+    Support targeted lookups (e.g., by name or substring) and navigation of cross-references, helping the agent locate relevant code regions linked to the crash.
+
+    \item \textbf{Editing and Annotation:}  
+    Enable renaming, prototype adjustments, and commenting within the decompiler or disassembly views, improving clarity during iterative analysis.
+\end{itemize}
+
+\begin{comment}
+    
 
 \begin{myitemize}
   \item \textbf{Decompilation and Disassembly:}  
@@ -413,6 +450,7 @@ The main capabilities exposed through the server are:
 \texttt{rename\_data},  \texttt{set\_decompiler\_comment}, \texttt{set\_disassembly\_comment} (return: flag or void).
 \end{myitemize}
 
+\end{comment}
 
 \subsubsection{Gemini-cli and Open Source \gls{llm}}
 
@@ -535,6 +573,8 @@ The extraction is performed in two phases:
 This filtered Java call graph is then attached to the \texttt{CrashSummary}, enabling the \gls{llm} to reason about both native- and Java-level execution paths.  
 In this way, the model can reconstruct the complete control-flow chain leading to the fault, rather than relying solely on the native stack trace generated by POIROT.
 
+\begin{comment}
+    
 
 \section{Environment Setup}
 \label{sec:container_usage}
@@ -565,25 +605,6 @@ During setup, \texttt{dockerSetup.sh} mounts two persistent volumes:
     \item \textbf{APKs}: provides shared access to the APK files to be analysed. If the APKs (the POIROT’s output) are placed in this directory, the container can access them directly; otherwise, the container remains isolated from the host filesystem, ensuring safe separation of data.
 \end{itemize}
 
-\begin{comment}
-The first execution of the container requires several additional configuration steps to enable the integration of \gls{mcp} servers and authentication for Gemini-CLI (if used):
-
-\paragraph{Gemini CLI setup.}
-Gemini authentication must be performed once, as the CLI requires an OAuth credential file. Since the Docker container lacks browser access, the login is completed externally on the host machine. 
-
-\paragraph{Jadx MCP server.}
-The Jadx MCP server is generally installed automatically when the container is first built. However, if errors occur, it can be installed manually by following the instructions.
-
-\paragraph{Ghidra MCP server.}
-The Ghidra MCP server is pre-packaged in the Docker image, but not installed, since required the use of the \gls{gui}. To activate it, Ghidra must first be launched in the container using. The setup then follows the official configuration steps described in the GhidraMCP documentation.
-
-The second script, \texttt{dockerRun.sh}, provides a simplified interface for launching the container after it has been configured. It executes only a few lines to start the existing \texttt{triage\_dev} container, resuming the previously configured environment without rebuilding or reinitialising it.
-
-\subsection*{Runtime Script}
-
-The script \texttt{dockerRun.sh} launches the preconfigured container
-without rebuilding it, enabling rapid iteration.
-\end{comment}
 
 \section{Command-Line Interface }
 
@@ -639,3 +660,26 @@ label={lst:triageExecution}]
         --timeout 240 \
         --debug
 \end{lstlisting}
+
+
+\end{comment}
+
+\begin{comment}
+The first execution of the container requires several additional configuration steps to enable the integration of \gls{mcp} servers and authentication for Gemini-CLI (if used):
+
+\paragraph{Gemini CLI setup.}
+Gemini authentication must be performed once, as the CLI requires an OAuth credential file. Since the Docker container lacks browser access, the login is completed externally on the host machine. 
+
+\paragraph{Jadx MCP server.}
+The Jadx MCP server is generally installed automatically when the container is first built. However, if errors occur, it can be installed manually by following the instructions.
+
+\paragraph{Ghidra MCP server.}
+The Ghidra MCP server is pre-packaged in the Docker image, but not installed, since required the use of the \gls{gui}. To activate it, Ghidra must first be launched in the container using. The setup then follows the official configuration steps described in the GhidraMCP documentation.
+
+The second script, \texttt{dockerRun.sh}, provides a simplified interface for launching the container after it has been configured. It executes only a few lines to start the existing \texttt{triage\_dev} container, resuming the previously configured environment without rebuilding or reinitialising it.
+
+\subsection*{Runtime Script}
+
+The script \texttt{dockerRun.sh} launches the preconfigured container
+without rebuilding it, enabling rapid iteration.
+\end{comment}
