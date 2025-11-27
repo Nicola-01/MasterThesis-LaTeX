@@ -116,6 +116,14 @@ If \texttt{is\_vulnerability} is \texttt{true}, the result also includes a \text
 The final report is entirely machine-readable and encapsulates both the analytical process and the supporting evidence.  
 This makes it suitable not only for human manual inspection, but also for automated downstream processing, such as filtering high-severity findings, or generating aggregated statistics across multiple applications.  
 
+
+\section{Prompt}
+
+required \gls{cot}
+
+
+\cite{nong2024chainofthoughtpromptinglargelanguage} show that \gls{cot} help ..
+
 \begin{comment}
 
 \section{Prompting Framework [Prompting Strategy]}
@@ -342,7 +350,7 @@ The top-level object contains a single field, \texttt{analysis}, wrapping all th
     \item \texttt{assessment} (\texttt{VulnResult}): the vulnerability triage produced by the \gls{llm}:
     \begin{itemize}
       \item \texttt{chain\_of\_thought}: a list of strings representing the step-by-step monologue that LLM thinks through before classifying.
-      \item \texttt{is\_vulnerability}: boolean verdict indicating whether the crash is likely a real vulnerability.
+      \item \texttt{is\_vulnerable}: boolean verdict indicating whether the crash is likely a real vulnerability.
       \item \texttt{confidence}: numerical confidence in $[0,1]$ associated with the verdict.
       \item \texttt{reasons}: short textual bullets explaining the decision (e.g. missing null-termination, out-of-bounds read).
       \item \texttt{cwe\_ids}: list of relevant CWE identifiers (e.g.\ \texttt{"CWE-125"} for out-of-bounds read).

@@ -1,83 +1,48 @@
-\chapter{Future Work \& Limitations}
+\chapter{Future Work}
 \label{chp:futureWork}
 
-\section{Future Work}
 This thesis has shown that an \gls{llm} equipped with \gls{mcp}-based access to Jadx and Ghidra can assist in the triage of crashes originating from native libraries in Android applications.  
-Several directions remain open for future development, both to improve the quality of the triage and to extend the capabilities of the system beyond its current scope.
+Several implementations could be developed in the future, particularly to further improve the quality of the triage.
 
 
-\subsection{Specialised Models for Vulnerability Triage}
+\section{Use of Specialised Models for Triage}
 
-The current pipeline relies on general-purpose \glspl{llm}, constrained and guided through meta-prompts and tool-use.  
-Recent work on LLM-assisted static analysis and hybrid vulnerability detection suggests that models specialised for security tasks can outperform purely generic models, especially when combined with static-analysis engines or domain-specific datasets.:contentReference[oaicite:0]{index=0}  
+The current approach relies on general-purpose \glspl{llm}, guided through meta-prompts and tool use.  
+Using models specifically adapted or trained for vulnerability analysis could improve stability, enhance recognition of recurring vulnerability patterns, and provide more consistent assessments across similar crashes.
 
-A natural extension would be to train or adapt models specifically for crash triage and vulnerability assessment.  
-This could involve fine-tuning on corpora of vulnerability reports, PoCs, and labelled crashes, or using lightweight adaptation techniques (e.g.\ adapters or LoRA) on top of existing general-purpose models.  
-Such specialisation could help the agent recognise recurring vulnerability patterns (e.g.\ off-by-one errors, use-after-free, integer truncation) more reliably, calibrate severity and exploitability assessments, and reduce false positives when distinguishing benign crashes from genuine security issues.  
-Future work should also investigate how these specialised models perform on standardised benchmarks for LLM-based vulnerability detection and triage.:contentReference[oaicite:1]{index=1}  
+%\textcolor{red}{find some example (pentestGPT ?)}
 
-\subsection{Persistent Agents and Dataset-Wide Consistency}
+\section{Persistent Agents}
 
-In the current implementation, each crash is analysed largely in isolation: the agent processes one \texttt{CrashSummary}, interacts with tools, produces a report, and then the context is reset.  
-One possible extension is to maintain a \emph{persistent} triage agent over an entire dataset of crashes or applications.  
-Such an agent would progressively accumulate knowledge about specific libraries, recurring code idioms, and previously classified vulnerabilities.
+In the current implementation, each crash is analysed in isolation: the agent processes the crashes associated with a method, interacts with the tools, produces a report, and then its context is reset.  
+A possible extension is to maintain a \emph{persistent} triage agent over time. That could be preceded by a lightweight training or calibration phase using an available ground-truth labeled   dataset.  
+Such an approach would allow the agent to internalise verified classifications and use them as stable reference points in subsequent analyses.
 
-A persistent agent could, for example, remember that a particular JNI library has already been associated with a confirmed buffer overflow and reuse this information when triaging subsequent crashes involving the same code.  
-It could also enforce consistency: similar crash patterns across different inputs should lead to similar classifications and severity assessments.  
-At the same time, this approach introduces new challenges: if the agent internalises an early misclassification, that error could propagate.  
-Future work should therefore explore mechanisms such as periodically resetting the context, grounding persistent knowledge only in validated labels, or using a small internal “triage log” that is explicitly checked rather than blindly trusted.
+A persistent agent could progressively accumulate knowledge about specific libraries, recurring code idioms, and previously classified vulnerabilities.  
+For example, it could remember that a particular JNI library has already been associated with a confirmed buffer overflow and reuse this information when triaging future crashes involving the same code.  
+It could also enforce dataset-wide consistency, ensuring that similar crash patterns across different APKs or execution traces receive comparable classifications and severity assessments.
 
-\subsection{\gls{rag}}
+\subsection{Use of \gls{rag}}
 
-The present system already adopts a form of tool-augmented reasoning: the \gls{llm} retrieves information from the current APK and its native libraries through MCP tools (Jadx and Ghidra).  
-However, it does not use Retrieval-Augmented Generation in the classical sense, where an external knowledge base is queried to retrieve documents or past examples that complement the model’s internal knowledge.:contentReference[oaicite:2]{index=2}  
+\gls{rag} supplements an \gls{llm} with an external knowledge base that can be queried at inference time. 
 
-A promising avenue is to build a curated repository of pre-analysed APKs, crashes, and ground-truth vulnerability labels, and to expose this repository through a RAG layer.  
-When facing a new crash, the triage agent could retrieve similar historical cases: past stack traces, decompiled snippets, and previously confirmed classifications for comparable patterns or even for the same library.  
-This would enable example-based reasoning (``this crash closely resembles a known CWE-125 out-of-bounds read previously confirmed in \texttt{libX.so}'') and provide a data-driven way to calibrate confidence and severity.  
-In such a design, MCP tools would continue to provide up-to-date, application-specific context, while RAG would supply prior knowledge and labelled precedents from a dedicated triage corpus.:contentReference[oaicite:3]{index=3}  
+Recent work shows that RAG can strengthen factual grounding in vulnerability analysis.  
+LProtector\cite{sheng2024lprotectorllmdrivenvulnerabilitydetection} improves detection accuracy and explainability by retrieving security-relevant context, while VulRAG\cite{du2025vulragenhancingllmbasedvulnerability} demonstrates that retrieving similar vulnerabilities or code fragments leads to more reliable classification.
 
-\subsection{\gls{llm}-Based Exploit Generation and Validation}
-
-At the current stage, the triage agent is limited to classification and explanation: it analyses the crash, discusses possible root causes, and may describe hypothetical exploitation scenarios, but it does not attempt to construct or validate concrete exploits.  
-Recent research on automatic exploit generation (AEG) with the help of \glspl{llm} indicates that multi-step agentic workflows can, at least on certain benchmarks, synthesise working exploits or proofs-of-vulnerability by combining analysis, code generation, and testing.:contentReference[oaicite:4]{index=4}  
-
-A natural extension of this work would therefore be to add an exploit-oriented phase after triage.  
-In one possible design, the system would first perform the current analysis (classifying the crash and estimating exploitability), then, for crashes assessed as likely vulnerabilities, spawn an exploit-generation loop in which the \gls{llm} proposes candidate inputs or harness modifications.  
-These candidates could be executed in a controlled environment—reusing the POIROT harness or a similar driver—to test whether the vulnerability can be deterministically triggered or escalated.  
-Agentic patterns such as ReAct-style reasoning-and-action cycles could be used to iteratively refine the exploit based on feedback from the execution environment.
-
-Such extensions come with important safety and ethical considerations.  
-Any exploit-generation functionality should be confined to offline research settings, applied to non-production targets or synthetic benchmarks, and accompanied by clear policies on disclosure and responsible handling of discovered vulnerabilities.  
-The goal would not be to facilitate exploitation in the wild, but to better understand the true impact and exploitability of vulnerabilities detected during triage, and to support defenders in prioritising remediation.
-
-\subsection{Broader Evaluation and Human-in-the-Loop Use}
-
-Finally, future work should focus on a broader and more systematic evaluation of the proposed pipeline.  
-This includes testing on larger and more diverse sets of APKs and crashes, comparing results with traditional static analysis and manual triage, and quantifying how much analyst effort is actually reduced in practice.:contentReference[oaicite:5]{index=5}  
-
-An especially relevant direction is human-in-the-loop usage, where security analysts interact with the system, accept or correct its assessments, and provide feedback on the clarity and usefulness of the generated explanations.  
-These interactions could, in turn, feed into future RAG components or specialised training data, gradually improving the system over time.  
-In this way, the triage agent would not replace human expertise, but act as an assistant that accelerates routine tasks while keeping humans firmly in control of critical security decisions.
-
-\subsection{Classification of real world apks}
-
-\section{Limitations}
-
-A first class of limitations concerns the underlying \glspl{llm} used in this work.  
-The triage agent is based on general-purpose models that are not explicitly trained for vulnerability detection or crash analysis.  
-As highlighted by recent surveys on LLM-based static code analysis and vulnerability detection, current models still exhibit inconsistent reasoning, sensitivity to prompt phrasing, and limited robustness across different codebases.:contentReference[oaicite:10]{index=10}  
-Moreover, hallucinations---fluent but incorrect statements not grounded in the available evidence---remain a known issue for LLMs and can affect security-related tasks if not carefully mitigated.:contentReference[oaicite:11]{index=11}  
-The MCP-based design and the explicit evidence-anchoring adopted in this thesis reduce, but do not eliminate, these risks.
+So, a possible extension would be to build a repository of pre-analysed APKs, crashes, and ground-truth labels, allowing the agent to retrieve historical cases similar to the current one.  
+Using these annotated crashes as an external reference, as ground truth and as concrete comparison, could help the agent anchor its reasoning, reduce ambiguity, and improve the quality and consistency of the classification.
 
 
-A second limitation lies in the scope and composition of the evaluation dataset.  
-The experiments are conducted on a finite set of APKs and crashes generated by POIROT, which may not be representative of the full spectrum of real-world Android applications or vulnerability classes, considering also that many of that was old version.  
-Ground-truth labels are available only for a subset of cases and often rely on manual analysis, which introduces potential bias.  
-%As a consequence, the reported results should be interpreted as a feasibility study rather than a definitive assessment of the general performance of LLM-assisted crash triage.
+\section{\gls{llm}-Based Exploit Generation and Validation}
 
+At the current stage, the agent is limited to analysing crashes and explaining possible root causes; it does not attempt to construct or validate concrete exploits.  
+A natural extension would be to introduce a post-triage phase in which the \gls{llm} engages in an iterative reasoning-and-action cycle, similar to ReAct-style prompting.  
+Given a crash, the agent would generate a candidate exploit input or harness modification, execute it in a controlled environment, observe the resulting behaviour and logs, and, if necessary, query additional code context via \gls{mcp}.  
+Based on this feedback loop, the agent could refine or redesign the exploit attempt, repeating the process until the vulnerability is confirmed as either exploitable or not.
 
-The proposed architecture also depends heavily on the correctness and stability of the underlying analysis tools and their MCP integrations.  
-Ghidra and Jadx may fail to decompile or analyse certain binaries, introduce inaccuracies in the recovered control flow, or behave differently across versions.  
-In addition, the current GhidraMCP design is bound to a single active CodeBrowser instance, which means that only one native library can be inspected at a time, limiting scalability when applications rely on many \texttt{.so} files.  
-Finally, both tools require a graphical environment to expose their functionality through MCP, which complicates deployment in fully headless or resource-constrained settings.
+\section{GAN-like Multi-Agent Structure}
+
+Another possible extension is to explore a GAN-like architecture composed of multiple \gls{llm} agents with opposing objectives.  
+One agent would attempt to demonstrate that a crash is exploitable, while a second agent would argue the opposite by seeking alternative explanations or benign root causes.  
+A third, neutral agent would then act as an adjudicator, evaluating the evidence produced by both sides and issuing the final classification.  
+%Such an adversarial setup could expose weak or ambiguous reasoning, reduce overconfidence, and lead to more robust and better-grounded triage decisions.

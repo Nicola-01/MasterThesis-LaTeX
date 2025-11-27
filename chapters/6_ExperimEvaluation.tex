@@ -22,7 +22,12 @@ All POIROT runs were executed on an AWS EC2 instance configured for large-scale 
 
 \subsection{LLM Used}
 
-The evaluation was conducted using the OpenAI model GPT-5.1.
+The evaluation was conducted using the OpenAI model GPT-5.1.  
+This model represented one of the most capable \glspl{llm} available at the time of testing and offered reliable support for \gls{mcp}-based tool use.
+GPT-5.1 also integrates smoothly with the Pydantic framework, allowing strict control over structured outputs.
+
+% No fine-tuning or additional training was performed, as the goal of the evaluation was to assess how a general-purpose model behaves when equipped with structured context and targeted guidance through MCP-based evidence retrieval.
+
 
 \section{Test Applications}
 
@@ -68,10 +73,14 @@ tw.com.taishinbank.ccapp & 5.631 & tw.gov.tra.twtraffic & 2.1.2 \\
 
 \textcolor{red}{Devo scrivere quali sono lastversion e quali quelle di circa 2023? }
 
-\section{Execution Time}
+Across all these applications, a total of 59 methods were identified, each associated with one or more crashes.  
+In total, the dataset contained 134 crash instances.
+
+\subsection{Execution Time}
 
 Table~\ref{tab:apps_time} reports the execution time for each application.  
 The total time per APK depends primarily on the \emph{number of crashes} produced by POIROT, as well as the number of relevant libraries and the complexity of the stack trace.
+Note that the reported time covers only the \gls{llm} classification phase and does not include the startup time of Ghidra, which depends solely on the number and size of the native libraries being imported.
 
 \begin{table}[ht]
 \centering
@@ -85,27 +94,28 @@ The total time per APK depends primarily on the \emph{number of crashes} produce
 br.com.pedidos10 & 80 & ca.radioplayer.android & 480 \\ 
 com.ahnlab.v3mobileplus & 338 & com.appgeneration.itunerfree & 113 \\ 
 com.cisco.webex.meetings & 129 & com.clearchannel.iheartradio.controller & 200 \\ 
-com.ford.fordpasseu & 185 & com.hyundaicard.cultureapp & 31 \\ 
-com.intsig.BCRLite & 59 & com.jeju.genie & 0 \\ 
-com.kbstar.kbbridge & 0 & com.kt.ktauth & 30 \\ 
-com.lottemembers.android & 71 & com.more.dayzsurvival.gp & 0 \\ 
+com.ford.fordpasseu & 185 & com.hyundaicard.cultureapp & 48 \\ 
+com.intsig.BCRLite & 59 & com.jeju.genie & 33 \\ 
+com.kbstar.kbbridge & 35 & com.kt.ktauth & 28 \\ 
+com.lottemembers.android & 71 & com.more.dayzsurvival.gp & 25 \\ 
 com.pandora.android & 420 & com.rockbite.deeptown & 17 \\ 
-com.rstgames.durak & 49 & com.samsungcard.shopping & 0 \\ 
-com.skmc.okcashbag.home\_google & 26 & com.skt.prod.dialer & 278 \\ 
-com.skt.smartbill & 196 & com.sopheos.videgreniersmobile & 60 \\ 
-com.ssg.serviceapp.android.egiftcertificate & 0 & com.teamjin.deliveryk & 83 \\ 
-com.tencent.mm & 199 & com.tplink.skylight & 71 \\ 
-fr.radioplayer.android & 628 & kr.co.busanbank.mbp & 403 \\ 
-kr.co.morpheus.geps & 59 & kr.co.samsungcard.mpocket & 53 \\ 
-kr.go.iros & 0 & kr.go.kcs.mobile.pubservice & 0 \\ 
-kr.go.minwon.m & 30 & kr.go.nts.android & 67 \\ 
-kr.go.wetax.android & 0 & nh.smart.allonebank & 0 \\ 
-nh.smart.banking & 0 & nh.smart.card & 30 \\ 
-nh.smart.nhcok & 0 & ragazzo.alphacode.com.br & 87 \\ 
+com.rstgames.durak & 36 & com.samsungcard.shopping & 22 \\ 
+com.skmc.okcashbag.home\_google & 57 & com.skt.prod.dialer & 278 \\ 
+com.skt.smartbill & 579 & com.sopheos.videgreniersmobile & 60 \\ 
+com.ssg.serviceapp.android.egiftcertificate & 31 & com.teamjin.deliveryk & 83 \\ 
+com.tencent.mm & 321 & com.tplink.skylight & 71 \\ 
+fr.radioplayer.android & 628 & kr.co.busanbank.mbp & 805 \\ 
+kr.co.morpheus.geps & 59 & kr.co.samsungcard.mpocket & 55 \\ 
+kr.go.iros & 43 & kr.go.kcs.mobile.pubservice & 60 \\ 
+kr.go.minwon.m & 30 & kr.go.nts.android & 87 \\ 
+kr.go.wetax.android & 35 & nh.smart.allonebank & 36 \\ 
+nh.smart.banking & 29 & nh.smart.card & 30 \\ 
+nh.smart.nhcok & 37 & ragazzo.alphacode.com.br & 87 \\ 
 tw.com.taishinbank.ccapp & 98 & tw.gov.tra.twtraffic & 78 \\ 
+
 \hline
 \hline
-\multicolumn{2}{|r||}{\textbf{Average Time}} & \multicolumn{2}{l|}{\textbf{232.4}} \\
+\multicolumn{2}{|r||}{\textbf{Average Time}} & \multicolumn{2}{l|}{\textbf{142}} \\
 \hline
 \end{tabular}
 }
@@ -113,22 +123,12 @@ tw.com.taishinbank.ccapp & 98 & tw.gov.tra.twtraffic & 78 \\
 \label{tab:apps_time}
 \end{table}
 
-\section{\gls{llm} Usage}
-
-\subsection{Tokens}
+\subsection{Tokens usage}
 
 \glspl{llm}, when accessed through their cloud \glspl{api}, compute usage costs based on the number of \emph{input tokens} (the prompt sent to the model) and \emph{output tokens} (the generated response).  
-Token consumption plays a central role in both performance and cost, and is influenced by several factors:
+Token consumption plays a central role in both performance and cost.  
+In this evaluation, usage varies primarily according to the size of the prompts (which include both the system and user components), the number of crashes produced by POIROT for each application, the amount of decompiled code retrieved from Ghidra—which grows with the depth and complexity of the stack trace—and the verbosity of the final triage explanation generated by the \gls{llm}.  
 
-
-Token usage depends mainly on:
-
-\begin{itemize}
-    \item The prompt used, including both the system prompt and the user prompt;
-    \item The number of crashes found by POIROT;
-    \item The amount of decompiled code retrieved from Ghidra, which depends on the depth of the crash stack trace;
-    \item The verbosity and structure of the triage explanation produced by the \gls{llm}.
-\end{itemize}
 
 Table~\ref{tab:apps_tokens} reports input and output token usage for each application.
 
@@ -145,30 +145,31 @@ Table~\ref{tab:apps_tokens} reports input and output token usage for each applic
 br.com.pedidos10 & 36344 & 4006 & ca.radioplayer.android & 494465 & 23484 \\ 
 com.ahnlab.v3mobileplus & 392719 & 17831 & com.appgeneration.itunerfree & 53776 & 6516 \\ 
 com.cisco.webex.meetings & 92548 & 7643 & com.clearchannel.iheartradio.controller & 151439 & 7039 \\ 
-com.ford.fordpasseu & 84360 & 6811 & com.hyundaicard.cultureapp & 14113 & 1642 \\ 
-com.intsig.BCRLite & 33230 & 4095 & com.jeju.genie & 0 & 0 \\ 
-com.kbstar.kbbridge & 0 & 0 & com.kt.ktauth & 14265 & 2262 \\ 
-com.lottemembers.android & 38747 & 2655 & com.more.dayzsurvival.gp & 0 & 0 \\ 
+com.ford.fordpasseu & 84360 & 6811 & com.hyundaicard.cultureapp & 14153 & 2152 \\ 
+com.intsig.BCRLite & 33230 & 4095 & com.jeju.genie & 12987 & 2244 \\ 
+com.kbstar.kbbridge & 13014 & 2189 & com.kt.ktauth & 41470 & 1466 \\ 
+com.lottemembers.android & 38747 & 2655 & com.more.dayzsurvival.gp & 6542 & 1250 \\ 
 com.pandora.android & 70891 & 9638 & com.rockbite.deeptown & 6564 & 1421 \\ 
-com.rstgames.durak & 56718 & 3376 & com.samsungcard.shopping & 0 & 0 \\ 
-com.skmc.okcashbag.home\_google & 29282 & 1096 & com.skt.prod.dialer & 212223 & 12100 \\ 
-com.skt.smartbill & 166934 & 10359 & com.sopheos.videgreniersmobile & 48392 & 3213 \\ 
-com.ssg.serviceapp.android.egiftcertificate & 0 & 0 & com.teamjin.deliveryk & 31816 & 4143 \\ 
-com.tencent.mm & 59455 & 13784 & com.tplink.skylight & 29527 & 4077 \\ 
-fr.radioplayer.android & 202292 & 21668 & kr.co.busanbank.mbp & 226538 & 19492 \\ 
-kr.co.morpheus.geps & 22248 & 1544 & kr.co.samsungcard.mpocket & 15476 & 1654 \\ 
-kr.go.iros & 0 & 0 & kr.go.kcs.mobile.pubservice & 0 & 0 \\ 
-kr.go.minwon.m & 14516 & 1378 & kr.go.nts.android & 40624 & 3648 \\ 
-kr.go.wetax.android & 0 & 0 & nh.smart.allonebank & 0 & 0 \\ 
-nh.smart.banking & 0 & 0 & nh.smart.card & 14111 & 1783 \\ 
-nh.smart.nhcok & 0 & 0 & ragazzo.alphacode.com.br & 38671 & 3792 \\ 
+com.rstgames.durak & 19232 & 1726 & com.samsungcard.shopping & 12380 & 1170 \\ 
+com.skmc.okcashbag.home\_google & 30012 & 3708 & com.skt.prod.dialer & 212223 & 12100 \\ 
+com.skt.smartbill & 359973 & 28820 & com.sopheos.videgreniersmobile & 48392 & 3213 \\ 
+com.ssg.serviceapp.android.egiftcertificate & 18401 & 1734 & com.teamjin.deliveryk & 31816 & 4143 \\ 
+com.tencent.mm & 877501 & 16197 & com.tplink.skylight & 29527 & 4077 \\ 
+fr.radioplayer.android & 202292 & 21668 & kr.co.busanbank.mbp & 495055 & 44584 \\ 
+kr.co.morpheus.geps & 22248 & 1544 & kr.co.samsungcard.mpocket & 29228 & 2915 \\ 
+kr.go.iros & 24988 & 2374 & kr.go.kcs.mobile.pubservice & 25362 & 3232 \\ 
+kr.go.minwon.m & 14516 & 1378 & kr.go.nts.android & 59025 & 4887 \\ 
+kr.go.wetax.android & 12829 & 2305 & nh.smart.allonebank & 24960 & 1695 \\ 
+nh.smart.banking & 20250 & 1610 & nh.smart.card & 14111 & 1783 \\ 
+nh.smart.nhcok & 14361 & 1676 & ragazzo.alphacode.com.br & 38671 & 3792 \\ 
 tw.com.taishinbank.ccapp & 31781 & 4205 & tw.gov.tra.twtraffic & 42834 & 3530 \\ 
+
 \hline
 \hline
 \multicolumn{3}{|r||}{\textbf{Average Input Tokens}} &
-\multicolumn{3}{l|}{\textbf{138345}} \\
+\multicolumn{3}{l|}{\textbf{212434}} \\
 \multicolumn{3}{|r||}{\textbf{Average Output Tokens}} &
-\multicolumn{3}{l|}{\textbf{10495}} \\
+\multicolumn{3}{l|}{\textbf{13963}} \\
 \hline
 \end{tabular}
 }
@@ -176,66 +177,161 @@ tw.com.taishinbank.ccapp & 31781 & 4205 & tw.gov.tra.twtraffic & 42834 & 3530 \\
 \label{tab:apps_tokens}
 \end{table}
 
-\subsection{Request}
+\subsection{Requests and Tool Calls}
 
-\textcolor{red}{Spiegazioen llm request e llm tool calls}
-        %"llm_requests": 0,
-        %"llm_tool_calls": 0,
+Each crash triggers a series of \emph{LLM requests}, corresponding to the number of times the agent sends a prompt to the model, and a number of \emph{LLM tool calls}, which represent successful invocations of Jadx or Ghidra through MCP during the analysis.  
 
+Table~\ref{tab:apps_requests} reports, for each application, the number of LLM requests and MCP tool calls performed during the full triage stage.  
 
 \begin{table}[ht]
 \centering
 \resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l|l||l|l|l|}
 \hline
-\multicolumn{6}{|c|}{\textbf{Token Usage per Application}} \\
+\multicolumn{6}{|c|}{\textbf{LLM request and Tool Calls per Application}} \\
 \hline
 \textbf{App} & \textbf{Input} & \textbf{Output} &
 \textbf{App} & \textbf{Input} & \textbf{Output} \\
 \hline
-br.com.pedidos10 & 5 & 9 & ca.radioplayer.android & 54 & 73 \\ 
+br.com.pedidos10 & 5 & 9 & ca.radioplayer.android & 44 & 53 \\ 
 com.ahnlab.v3mobileplus & 31 & 42 & com.appgeneration.itunerfree & 6 & 14 \\ 
 com.cisco.webex.meetings & 10 & 23 & com.clearchannel.iheartradio.controller & 17 & 20 \\ 
 com.ford.fordpasseu & 9 & 26 & com.hyundaicard.cultureapp & 2 & 3 \\ 
-com.intsig.BCRLite & 4 & 9 & com.jeju.genie & 0 & 0 \\ 
-com.kbstar.kbbridge & 0 & 0 & com.kt.ktauth & 2 & 3 \\ 
-com.lottemembers.android & 2 & 5 & com.more.dayzsurvival.gp & 0 & 0 \\ 
-com.pandora.android & 8 & 20 & com.rockbite.deeptown & 1 & 0 \\ 
-com.rstgames.durak & 7 & 6 & com.samsungcard.shopping & 0 & 0 \\ 
-com.skmc.okcashbag.home\_google & 4 & 3 & com.skt.prod.dialer & 26 & 26 \\ 
-com.skt.smartbill & 21 & 27 & com.sopheos.videgreniersmobile & 6 & 10 \\ 
-com.ssg.serviceapp.android.egiftcertificate & 0 & 0 & com.teamjin.deliveryk & 4 & 9 \\ 
-com.tencent.mm & 36 & 29 & com.tplink.skylight & 4 & 9 \\ 
-fr.radioplayer.android & 22 & 59 & kr.co.busanbank.mbp & 19 & 44 \\ 
-kr.co.morpheus.geps & 3 & 4 & kr.co.samsungcard.mpocket & 2 & 5 \\ 
-kr.go.iros & 0 & 0 & kr.go.kcs.mobile.pubservice & 0 & 0 \\ 
-kr.go.minwon.m & 2 & 4 & kr.go.nts.android & 5 & 11 \\ 
-kr.go.wetax.android & 0 & 0 & nh.smart.allonebank & 0 & 0 \\ 
-nh.smart.banking & 0 & 0 & nh.smart.card & 2 & 3 \\ 
-nh.smart.nhcok & 0 & 0 & ragazzo.alphacode.com.br & 5 & 13 \\ 
+com.intsig.BCRLite & 4 & 9 & com.jeju.genie & 2 & 3 \\ 
+com.kbstar.kbbridge & 2 & 3 & com.kt.ktauth & 6 & 6 \\ 
+com.lottemembers.android & 2 & 5 & com.more.dayzsurvival.gp & 2 & 3 \\ 
+com.pandora.android & 8 & 20 & com.rockbite.deeptown & 2 & 2 \\ 
+com.rstgames.durak & 3 & 3 & com.samsungcard.shopping & 2 & 2 \\ 
+com.skmc.okcashbag.home\_google & 4 & 5 & com.skt.prod.dialer & 26 & 26 \\ 
+com.skt.smartbill & 51 & 82 & com.sopheos.videgreniersmobile & 6 & 10 \\ 
+com.ssg.serviceapp.android.egiftcertificate & 3 & 2 & com.teamjin.deliveryk & 4 & 9 \\ 
+com.tencent.mm & 49 & 42 & com.tplink.skylight & 4 & 9 \\ 
+fr.radioplayer.android & 22 & 59 & kr.co.busanbank.mbp & 55 & 63 \\ 
+kr.co.morpheus.geps & 3 & 4 & kr.co.samsungcard.mpocket & 4 & 8 \\ 
+kr.go.iros & 4 & 4 & kr.go.kcs.mobile.pubservice & 4 & 4 \\ 
+kr.go.minwon.m & 2 & 4 & kr.go.nts.android & 8 & 13 \\ 
+kr.go.wetax.android & 2 & 3 & nh.smart.allonebank & 4 & 4 \\ 
+nh.smart.banking & 3 & 4 & nh.smart.card & 2 & 3 \\ 
+nh.smart.nhcok & 2 & 4 & ragazzo.alphacode.com.br & 5 & 13 \\ 
 tw.com.taishinbank.ccapp & 4 & 10 & tw.gov.tra.twtraffic & 5 & 13 \\ 
+
 \hline
 \hline
 \multicolumn{3}{|r||}{\textbf{Average LLM requests}} &
 \multicolumn{3}{l|}{\textbf{16.4}} \\
 \multicolumn{3}{|r||}{\textbf{Average LLM Tool Calls}} &
-\multicolumn{3}{l|}{\textbf{26.6}} \\
+\multicolumn{3}{l|}{\textbf{25.3}} \\
 \hline
 \end{tabular}
 }
-\caption{Input and output token usage per application.}
-\label{tab:apps_tokens}
+\caption{LLM request and Tool Calls per application.}
+\label{tab:apps_requests}
 \end{table}
         
+\vfill
 
-\subsubsection{Evaluation Metrics}
 
-\textcolor{red}{DA VEDERE se serve specificare le metriche}
+\section{Evaluation Metrics}
+\textcolor{red}{non se serve specificare le metriche}
 
-For the evaluation, the F1-score was selected as the primary metric. This measure is commonly employed in classification settings because it offers a single value that reflects the trade-off between precision and recall, which is especially important when the distribution of classes is unbalanced or when both false positives and false negatives carry comparable weight. The F1-score is defined as:
+
+To objectively assess the performance of the LLM-based triage system, standard information retrieval metrics derived from a confusion matrix are employed. Given the binary nature of the classification task—determining whether a crash is a vulnerability or a benign issue—the possible outcomes are defined as follows:
+
+\begin{itemize}
+    \item \textbf{True Positive (TP):} A vulnerability correctly identified by the model. The crash represents a security risk, and the system correctly classified it as such (\texttt{is\_vulnerable: true}).
+    \item \textbf{False Positive (FP):} A benign crash incorrectly flagged as a vulnerability. This represents a ''false alarm``, where the model assigns security relevance to a non-exploitable issue.
+    \item \textbf{True Negative (TN):} A benign crash correctly identified as non-vulnerable. The system correctly determined that the issue does not pose a security risk.
+    \item \textbf{False Negative (FN):} A vulnerability missed by the model. The crash is dangerous, but the system incorrectly classified it as benign.
+\end{itemize}
+
+Based on these definitions, the following metrics were calculated:
+
+\paragraph{Accuracy}
+Accuracy measures the overall correctness of the model across all predictions. While useful, it can be misleading in datasets with significant class imbalance (e.g., where benign crashes vastly outnumber vulnerabilities).
+\[
+\text{Accuracy} = \frac{\text{TP} + \text{TN}}{\text{TP} + \text{TN} + \text{FP} + \text{FN}}
+\]
+
+\paragraph{Precision} Precision quantifies the reliability of the positive predictions. In the context of this thesis, high precision implies that when the tool flags a crash as a vulnerability, it is highly likely to be a genuine threat, thereby reducing the manual verification effort for analysts.
+\[
+\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}
+\]
+
+\paragraph{Recall}
+Recall measures the system's ability to detect all actual vulnerabilities. High recall is critical in security contexts to ensure that dangerous flaws are not overlooked (minimizing False Negatives).
+\[
+\text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}
+\]
+
+\paragraph{F1-Score}
+For the evaluation, the F1-score was selected as the primary metric. This measure is commonly employed in classification settings because it offers a single value that reflects the trade-off between precision and recall, which is especially important when the distribution of classes is unbalanced or when both false positives and false negatives carry comparable weight. The F1-score is defined as the harmonic mean of precision and recall:
 \[
 \mathrm{F1} = 2 \cdot \frac{\text{precision} \cdot \text{recall}}{\text{precision} + \text{recall}}
 \]
+The F1-score ensures a lower overall score if either precision or recall diverges significantly, even if one of the two is high, providing a balanced view of the model's effectiveness.
 
-Precision quantifies the proportion of correctly identified positive cases among all cases predicted as positive, whereas recall quantifies the proportion of actual positive cases that were successfully detected.  
-The F1-score combines these two aspects through their harmonic mean, ensuring a lower score when precision and recall diverge significantly, even if one of the two is high.
+\section{Results}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    ymin=0,
+    ymax=30,
+    bar width=20pt,
+    width=14cm,
+    height=7cm,
+    ylabel={Count},
+    symbolic x coords={TP,TN,FP,FN},
+    xticklabels={
+        {True~Positive},
+        {True~Negative},
+        {False~Positive},
+        {False~Negative}
+    },
+    xtick=data,
+    nodes near coords,
+    nodes near coords align={vertical},
+    title={Triage Classification Outcomes},
+]
+\addplot coordinates {(TP,14) (TN,23) (FP,17) (FN,3)};
+\end{axis}
+\end{tikzpicture}
+\caption{Distribution of classification outcomes across the dataset.}
+\label{fig:classification_outcomes}
+\end{figure}
+
+
+The bar chart in Figure~\ref{fig:classification_outcomes} summarises how the system classified the 134 crash instances in the dataset.  
+Most predictions fall into the True Negative (23) and False Positive (17) categories, indicating that the model frequently flagged benign crashes as vulnerabilities.  
+Conversely, the system correctly identified 14 genuine vulnerabilities (True Positives) and missed only 3 (False Negatives).  
+This distribution suggests that the model favours recall—successfully detecting most real vulnerabilities—but at the cost of a higher number of false alarms.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Metric} & \textbf{Value} \\
+\hline
+\hline
+Accuracy  & 0.6491 \\
+Precision & 0.4516 \\
+Recall    & 0.8235 \\
+F1 Score  & 0.2917 \\
+\hline
+\end{tabular}
+\caption{Evaluation metrics computed from the classification results.}
+\label{tab:eval_metrics}
+\end{table}
+
+
+
+Table~\ref{tab:eval_metrics} reports the derived performance metrics.  
+The overall accuracy (0.6491) reflects the proportion of correct classifications across all crashes, though it is influenced by the imbalance between benign and vulnerable samples.  
+Precision (0.4516) is relatively low, consistent with the high number of False Positives observed in the chart; many issues flagged as vulnerabilities did not correspond to real security risks.  
+Recall (0.8235) is considerably higher, showing that the system is effective at capturing genuine vulnerabilities and rarely overlooks dangerous cases.  
+However, the F1-score (0.2917)—the harmonic mean of precision and recall—is low, indicating an uneven balance between detecting vulnerabilities and avoiding false alarms.
+
+Overall, these results show that the current implementation is conservative in its judgement, prioritising the detection of potential vulnerabilities over strict precision.  
+While this behaviour is desirable in contexts where missing a vulnerability is more costly than over-reporting, it also highlights the need for improvements aimed at reducing false positives, such as integrating specialised models, adopting RAG-based grounding, or leveraging persistent agents as discussed in Chapter~\ref{chp:futureWork}.

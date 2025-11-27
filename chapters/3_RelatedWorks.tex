@@ -22,7 +22,6 @@ Tool grounding aims to reduce hallucinations and improve faithfulness by letting
 \section{Positioning}
 Compared to POIROT and Atlas, which focus on automating harness generation and fuzzing at scale \cite{poirot-usenix25,atlas-issta24}, our work targets the \emph{post-fuzzing} triage stage for Android native crashes. Relative to CASEY/LProtector and survey results on \gls{llm}-for-security \cite{casey-aic25,lprotector-2024,acl25-llm-benchmark-slr,slr-llm-vuln-2025}, our contribution is a tool-grounded pipeline that couples \gls{mcp}-mediated access to Jadx/Ghidra with crash artefacts from POIROT, aiming to improve precision, explainability, and analyst verification for \gls{jni}-mediated memory-safety issues.
 
-\end{comment}
 
 The proposed approach lies at the confluence of coverage-guided fuzzing and bottom-up harness generation, and recent applications of \gls{llm}s to vulnerability classification and triage. We organise prior work into four strands: (i) methodologies for automated vulnerability discovery via fuzzing; (ii) \gls{llm}-assisted harness generation and mitigation of false positives; (iii) \gls{llm}-based vulnerability triage and assessment; and (iv) reasoning and validation-feedback loops that improve reliability of automated analyses.
 
@@ -51,11 +50,15 @@ Our focus is on post-fuzzing \emph{triage} rather than on harness generation per
 
 \section*{\textcolor{red}{Note on tool-grounding and \gls{mcp} in cybersecurity}}
 \textcolor{red}{While our evaluation relies solely on the cited literature above, our method employs tool-grounding to reduce hallucinations and improve verifiability. In particular, \gls{mcp}-mediated access to reverse-engineering tools (e.g., bytecode and native artefacts) can supply the compact, high-value context recommended by prior work. A systematic review of \gls{mcp} applications in cybersecurity will be included in a future revision, with explicit citations once curated.}
+\end{comment}
+
 
 \begin{comment}
     \paragraph{Summary.}
 Prior work shows that \gls{llm}s can help generate harnesses, reduce false positives via constraint extraction and feasibility checking, and automate \gls{cwe}/\gls{cvss} labelling when provided with focused, structured context \cite{amusuo2025falsecrashreducermitigatingfalsepositive,liupromefuzz,torkamani2025streamlining,10706805,10.1145/3597503.3639121}. Our thesis builds on these insights to design a tool-grounded triage pipeline tailored to Android’s managed–native boundary, aiming to deliver evidence-linked, analyst-verifiable decisions for crashes produced by fuzzing native libraries.
-\end{comment}
 
 \section{aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
 \textcolor{red}{https://arxiv.org/pdf/2510.18508}
+\end{comment}
+
+
