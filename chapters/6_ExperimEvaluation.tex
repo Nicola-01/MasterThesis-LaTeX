@@ -3,8 +3,10 @@
 
 \section{Experimental Setup}
 
-The evaluation of the tool was performed on a local machine, using the Docker-based environment described in Chapter~\ref{chp:docker}.  
-The environment consisted of:
+%, using the Docker-based environment described in Chapter~\ref{chp:docker}.
+
+The evaluation of the tool was carried out on a local machine.  
+The experimental environment consisted of:
 
 \begin{itemize}
     \item Local machine running \textbf{Ubuntu 25.04};
@@ -276,11 +278,11 @@ The F1-score ensures a lower overall score if either precision or recall diverge
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-    ybar,
+    ybar stacked,
     ymin=0,
     ymax=30,
     bar width=20pt,
-    width=14cm,
+    width=10cm,
     height=7cm,
     ylabel={Count},
     symbolic x coords={TP,TN,FP,FN},
@@ -293,9 +295,12 @@ The F1-score ensures a lower overall score if either precision or recall diverge
     xtick=data,
     nodes near coords,
     nodes near coords align={vertical},
+    \legend{\strut With CG, \strut Without CG}
     title={Triage Classification Outcomes},
 ]
-\addplot coordinates {(TP,14) (TN,23) (FP,17) (FN,3)};
+\addplot coordinates {(TP,8) (TN,10) (FP,6) (FN,2)};
+\addplot coordinates {(TP,5) (TN,12) (FP,9) (FN,2)};
+%\addplot coordinates {(TP,1) (TN,23) (FP,17) (FN,3)};
 \end{axis}
 \end{tikzpicture}
 \caption{Distribution of classification outcomes across the dataset.}
@@ -310,15 +315,15 @@ This distribution suggests that the model favours recall—successfully detectin
 
 \begin{table}[ht]
 \centering
-\begin{tabular}{|l|c|}
+\begin{tabular}{|l|c|c|c|}
 \hline
-\textbf{Metric} & \textbf{Value} \\
+ & \textbf{With CG} & \textbf{Without CG} & \textbf{Total} \\
 \hline
 \hline
-Accuracy  & 0.6491 \\
-Precision & 0.4516 \\
-Recall    & 0.8235 \\
-F1 Score  & 0.2917 \\
+\textbf{Accuracy}  & 0.6491 & & \\
+\textbf{Precision} & 0.4516 & & \\
+\textbf{Recall}    & 0.8235 & & \\
+F1-\textbf{Score}  & 0.2917 & & \\
 \hline
 \end{tabular}
 \caption{Evaluation metrics computed from the classification results.}
