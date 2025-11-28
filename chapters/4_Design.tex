@@ -54,6 +54,10 @@ The structured design therefore relies on a set of core data models, described b
 
 \medskip
 
+Some of these data structures will be examined in more detail throughout this chapter.
+
+\medskip
+
 Overall, this strict modelling architecture ensures resilience against malformed or incomplete \gls{llm} outputs and provides a deterministic structure for downstream processing, evaluation, and reproducibility.
 
 \section{Prompt Design}\label{chp:prompt}
@@ -184,12 +188,72 @@ Although the system prompt provides a suggested pipeline for collecting informat
 The agent can adaptively select the most appropriate \gls{mcp} call based on the evidence needed to advance its reasoning, allowing the triage process to remain flexible while still grounded in verifiable tool-assisted retrieval.
 
 
-\subsection{Report Generation} % [Evidence Integration and Final Report Generation]}
+\subsection{Assessment Generation} % [Evidence Integration and Final Report Generation]}
 
-Once sufficient evidence has been gathered, the \gls{llm} synthesises a structured assessment, returned as a \texttt{VulnResult}. 
+Once sufficient evidence about the crash has been gathered, the \gls{llm} synthesises a structured assessment, returned as a \texttt{VulnResult}.  
+This object follows a strictly defined schema and contains all information required to characterise the crash, justify the classification, and, when applicable, describe a plausible exploitation path.
+
+%\paragraph{Vulnerability Classification Fields.}
+The \texttt{VulnResult} begins with the core elements of the triage:
+
+\begin{myitemize}
+    \item \textbf{chain\_of\_thought}: an internal step-by-step reasoning trace produced before the final verdict.
+    \item \textbf{is\_vulnerable}: the final verdict indicating whether the crash corresponds to a likely vulnerability.
+    \item \textbf{confidence}: a calibrated score in the range $[0,1]$ reflecting how strongly the evidence supports the classification.
+    \item \textbf{reasons}: a list of short, concrete justifications summarising the logic behind the verdict.
+    \item \textbf{cwe\_ids}: identifiers of relevant \glsxtrlong{cwe}, enabling alignment with standard vulnerability taxonomies.
+    \item \textbf{severity}: an estimated impact level (low, medium, high, or critical) based on the nature of the fault and the contextual evidence.
+\end{myitemize}
+
+%\paragraph{Contextual Information.}
+To provide a complete picture of the issue, the output also includes:
+
+\begin{myitemize}
+    \item \textbf{affected\_libraries}: the actual native libraries involved in the crash.
+    \item \textbf{call\_sequence}: the sequence of functions—Java and native—that lead to the faulting code region.
+    \item \textbf{evidence}: a collection of structured \texttt{EvidenceItem} objects, each containing a function name, address, code excerpt, or decompiled snippet, together with a brief explanatory note.
+    \item \textbf{recommendations}: actionable steps or fixes that could mitigate the issue.
+    \item \textbf{assumptions} and \textbf{limitations}: statements that explicitly document missing information or uncertainty in the reasoning.
+\end{myitemize}
+
+%\paragraph{Exploitability Analysis.}
+If \texttt{is\_vulnerability = true}, the agent also produces an \texttt{Exploit} object describing the exploitability of the issue.  
+Its structure includes:
+
+\begin{myitemize}
+    \item \textbf{exploitability}: whether exploitation is unknown, theoretical, or practically achievable.
+    \item \textbf{trigger\_method}: the mechanism required to activate the vulnerability (e.g.\ malformed input, crafted intent).
+    \item \textbf{prerequisites}: environmental or permission-related conditions needed for the exploit to succeed.
+    \item \textbf{exploit\_pipeline}: an ordered, high-level description of how an attacker could progress from initial conditions to triggering the vulnerable behaviour.
+    \item \textbf{PoC\_commands}: a theoretical, ready-to-use ADB or shell commands for reproducing the crash or exploit.
+    \item \textbf{poc\_files}: references to crafted payload files used during exploitation.
+\end{myitemize}
+
+\paragraph{Purpose of Chain-of-Thought and Chain-of-Process.}
+Two additional components—\textbf{Chain-of-Thought (CoT)} and the \textbf{Exploit / Chain-of-Process (CoP)} block—are included to guide the \gls{llm} toward grounded, non-speculative reasoning.
+
+The \textbf{CoT} field stores the model's internal reasoning steps used \emph{before} classification.  
+Its purpose is not to be shown to a human evaluator but to keep the model focused on systematic, step-by-step analysis rather than relying on pattern-matching shortcuts.  
+By prompting the model to reason explicitly, the system reduces the likelihood of superficial or hallucinated assessments and encourages the analysis of concrete evidence retrieved via \gls{mcp} tools.  
+Empirically, the inclusion of \gls{cot} led to more consistent and accurate classifications, reducing false positives.
+
+
+The \textbf{CoP}/\texttt{Exploit} section is designed for a similar reason: it prevents the model from producing arbitrary or unrealistic exploitation scenarios.  
+Instead of guessing, the model must construct a plausible and evidence-driven exploitation flow grounded in the actual structure of the application, the available attack surface, and the retrieved code snippets.  
+Requiring a exploitation pipeline and concrete \gls{poc} commands constrains the model to operate within the boundaries of what is technically justified by the evidence.
+
+%\medskip
+
+%The final report is therefore fully machine-readable and suitable for downstream analysis, aggregation, or integration into automated pipelines, while remaining traceable and explainable thanks to the structured evidence and reasoning fields.
+
+
+
+\begin{comment}
+    
+Once sufficient evidence about the crash has been gathered, the \gls{llm} synthesises a structured assessment, returned as a \texttt{VulnResult}. 
 The output follows a constrained JSON schema:
-\begin{itemize}
-    \item The \textbf{vulnerability verdict} and associated \textbf{confidence score}, the confidence should reflect the degree to which the classification is considered accurate;
+\begin{myitemize}
+    \item The \textbf{vulnerability verdict} (\texttt{is\_vulnerability} = True or False) and associated \textbf{confidence score}, the confidence should reflect the degree to which the classification is considered accurate;
     \item A \textbf{classification reasons};
     \item \textbf{\gls{cwe} identifiers} and the \textbf{estimated severity};
     \item List of \textbf{implicated libraries} and \textbf{affected functions};
@@ -197,37 +261,114 @@ The output follows a constrained JSON schema:
     \item Set of supporting \textbf{``reasons''} grounding the decision;
     \item Structured \textbf{evidence items}, including code excerpts, function names, addresses, and explanatory notes;
     \item \textbf{Explicit} assumptions, \textbf{limitations}, and recommended \textbf{mitigation steps}.
-\end{itemize}
+\end{myitemize}
 
 If \texttt{is\_vulnerability} is \texttt{true}, the result also includes a \texttt{Exploit} object providing a detailed exploitability analysis:
 
-\begin{itemize}
+\begin{myitemize}
     \item Exploitability level (\textit{none}, \textit{theoretical}, or \textit{practical});
     \item Triggering method (mechanism required to activate the vulnerability);
     \item Environmental or permission \textbf{prerequisites};
     \item The ordered \textbf{exploitation pipeline} describing the full attack flow;
     \item Copy-and-paste-ready \textbf{PoC commands} (e.g.\ ADB or shell commands).
-\end{itemize}
+\end{myitemize}
 
 The final report is entirely machine-readable and encapsulates both the analytical process and the supporting evidence.  
 This makes it suitable not only for human manual inspection, but also for automated downstream processing, such as filtering high-severity findings, or generating aggregated statistics across multiple applications.  
 
 
+\end{comment}
 
-\subsection{Evidence Integration and Final Report Generation}
+\subsection{Final Report Generation}
 
-For each crash identified in an application, the system first constructs a \texttt{CrashSummary}, which captures the execution context and the native failure characteristics in a structured format. This object is passed to the \gls{llm}, together with the relevant \texttt{AppMetadata}, enabling the model to perform a contextualised classification without relying solely on free-form prompts.
+For each crash of application method, the system constructs a \texttt{CrashSummary} that is passed to the \gls{llm}, enabling a contextualised classification through the Jadx and Ghidra \glspl{mcp}.  
+The resulting \texttt{VulnResult}, together with the corresponding \texttt{CrashSummary} and \texttt{Statistics} for that crash, is then wrapped into an \texttt{AnalysisResult}.  
+A collection of these objects forms an \texttt{AnalysisResults}, which represents all crash-level assessments associated with the same method.
 
-The \gls{llm} processes this information and returns a structured \texttt{VulnResult}, which contains the vulnerability verdict, supporting evidence, confidence estimates, CWE identifiers, reconstructed execution paths, and optional exploitability information. The tool then stores this result together with the processed crash and usage statistics (e.g.\ token counts, request time) in an \texttt{AnalysisResults} object.
-
-Finally, each analysis run is encapsulated in an \texttt{AnalysisBlock}, which bundles:
+Finally, the analysis run is encapsulated in an \texttt{AnalysisBlock}, which aggregates:
 \begin{itemize}
-    \item the full set of \texttt{AnalysisResults} for the application,
-    \item the corresponding \texttt{AppMetadata},
-    \item and the tool-level metadata, including the \gls{llm} model used and tool version.
+    \item the tool-level information (e.g.\ selected \gls{llm} model and tool versions).
+    \item the application \texttt{AppMetadata},
+    \item the complete set of \texttt{AnalysisResults} for the application,
 \end{itemize}
 
-The \texttt{AnalysisBlock} is serialised as a well-formed \texttt{JSON} file, allowing the entire pipeline---from crash extraction to final assessment---to be exported, archived, and automatically processed by external tools. This enables downstream tasks such as aggregating results across multiple applications, filtering by severity or CWE class, performing statistical analyses, or integrating the outputs into larger testing and validation workflows.
+\section{Output Structure}
+
+The \texttt{AnalysisBlock} is serialised into a well-formed \texttt{JSON} file, allowing the entire workflow—from crash extraction to final assessment—to be exported, archived, and automatically processed by external systems.  
+This enables downstream tasks such as aggregating results across applications, filtering by severity or \gls{cwe} category, computing statistics, or integrating the outputs into broader testing and validation pipelines.
+\medskip
+
+\noindent Each report is written to: \texttt{<out-dir>/<pkg>/<JNImethod>/report.json}.
+\noindent Listing~\ref{lst:jsonOutput} shows an example of a real final JSON output.  
+%The structure is defined by the \texttt{AnalysisContainer}, \texttt{AnalysisBlock}, and \texttt{AnalysisResult}.
+
+The top-level object contains a single field, \texttt{analysis}, wrapping all the relevant metadata and results:
+
+\begin{itemize}
+  \item \textbf{\texttt{analysis.tool}} (\texttt{ToolInfo})  
+  Describes the environment and configuration used for the triage:
+  \begin{myitemize}
+    \item \texttt{model\_name}: identifier of the \gls{llm} used (e.g.\ \texttt{"gpt-5.1"}, \texttt{"gpt-oss:120b"}).
+    \item \texttt{apk\_path}: path to the analysed APK (e.g.\ \texttt{"APKs/com.tplink.skylight/base.apk"}).
+    \item \texttt{version}: internal version of the triage tool.
+  \end{myitemize}
+
+  \item \textbf{\texttt{analysis.app}} (\texttt{AppMetadata})  
+  Contains the application metadata extracted from Jadx:
+  \begin{myitemize}
+    \item \texttt{app\_name}: human-readable application label.
+    \item \texttt{package}: package name (application identifier).
+    \item \texttt{min\_sdk}, \texttt{target\_sdk}: minimum and target Android SDK levels.
+    \item \texttt{version\_name}, \texttt{version\_code}: versioning information of the analysed build.
+  \end{myitemize}
+
+  \item \textbf{\texttt{analysis.analysisResults}} (\texttt{AnalysisResults})  
+  A \emph{list} of per-crash assessments. Each element is an \texttt{AnalysisResult} object bundling:
+  \begin{itemize}
+    \item \texttt{crash} (\texttt{CrashSummary}): a normalised description of the crash:
+    \begin{myitemize}
+      \item \texttt{ProcessTermination}: crash cause as reported by the runtime..
+      \item \texttt{StackTrace}: list of native frames involved in the crash.
+      \item \texttt{JavaCallGraph}: Java $\rightarrow$ JNI call chain leading to the JNI bridge method.
+      \item \texttt{JNIBridgeMethod}: JNI entry point associated with the crash.
+      \item \texttt{JavaCallGraph}: Java call chain leading to the JNI method.
+      \item \texttt{FuzzHarnessEntry}: fuzzer entry function used to drive inputs.
+      \item \texttt{ProgramEntry}: process entry point.
+      \item \texttt{LibMap}: native libraries involved in the crash.
+
+    \end{myitemize}
+
+    \item \texttt{assessment} (\texttt{VulnResult}): the vulnerability triage produced by the \gls{llm}:
+    \begin{myitemize}
+      \item \texttt{chain\_of\_thought}: a list of strings representing the step-by-step monologue that LLM thinks through before classifying.
+      \item \texttt{is\_vulnerable}: boolean verdict indicating whether the crash is likely a real vulnerability.
+      \item \texttt{confidence}: numerical confidence in $[0,1]$ associated with the verdict.
+      \item \texttt{reasons}: short textual bullets explaining the decision (e.g. missing null-termination, out-of-bounds read).
+      \item \texttt{cwe\_ids}: list of relevant CWE identifiers (e.g.\ \texttt{"CWE-125"} for out-of-bounds read).
+      \item \texttt{severity}: estimated impact level (\texttt{"low"}, \texttt{"medium"}, \texttt{"high"}, \texttt{"critical"} or \texttt{null} if unknown).
+      \item \texttt{affected\_libraries}: list of libraries implicated in the crash.
+      \item \texttt{recommendations}: concrete mitigation or follow-up actions (e.g.\ enforcing null-termination, adding bounds checks).
+      \item \texttt{assumptions}: explicit assumptions made by the model (e.g.\ nature of the input or control over certain parameters).
+      \item \texttt{limitations}: known gaps in the analysis (e.g.\ partial decompilation, missing source, lack of full context).
+      \item \texttt{evidence}: list of \texttt{EvidenceItem} objects, each optionally containing:
+        \begin{myitemize}
+            \item \texttt{function}: function name relevant to the issue.
+            \item \texttt{address}: code address within the library (when available).
+            \item \texttt{file}: library or source file associated with the evidence.
+            \item \texttt{snippet}: short decompiled excerpt or code fragment.
+            \item \texttt{note}: explanation of why this snippet supports the classification
+        \end{myitemize}
+    \end{myitemize}
+   \item \texttt{Statistics}: basic metrics on the analysis.
+    \begin{myitemize}
+        \item \texttt{time}: total analysis time.
+        \item \texttt{llm\_requests}: number of LLM requests.
+        \item \texttt{llm\_tool\_calls}: number of MCP tool calls.
+        \item \texttt{input\_tokens}: tokens sent to the LLM.
+        \item \texttt{output\_tokens}: tokens produced by the LLM.
+    \end{myitemize}
+  \end{itemize}
+\end{itemize}
 
 \begin{comment}
 
@@ -281,85 +422,3 @@ Some prompting strategies (e.g.\ temperature scaling, prompt ensembles) were int
 to maintain determinism.
 
 \end{comment}
-
-\section{Output Structure}
-
-The final stage of the triage pipeline produces a structured and self-contained JSON report.  
-This report contains all the contextual information required to understand the environment in which the analysis was performed, the metadata of the analysed \gls{apk}, and the full set of vulnerability assessments produced for each crash detected in the native libraries.
-
-Each report is written to: \texttt{<out-dir>/<pkg>/<JNImethod>/report.json}
-
-Listing~\ref{lst:jsonOutput} shows an example of the final JSON output.  
-%The structure is defined by the \texttt{AnalysisContainer}, \texttt{AnalysisBlock}, and \texttt{AnalysisResult}.
-
-\paragraph{Structure overview.}
-The top-level object contains a single field, \texttt{analysis}, wrapping all the relevant metadata and results:
-
-\begin{itemize}
-  \item \textbf{\texttt{analysis.tool}} (\texttt{ToolInfo})  
-  Describes the environment and configuration used for the triage:
-  \begin{itemize}
-    \item \texttt{model\_name}: identifier of the \gls{llm} used (e.g.\ \texttt{"gemini-cli"}, \texttt{"gpt-oss:120b"}).
-    \item \texttt{apk\_path}: path to the analysed APK (e.g.\ \texttt{"APKs/com.tplink.skylight/base.apk"}).
-    \item \texttt{version}: internal version of the triage tool.
-  \end{itemize}
-
-  \item \textbf{\texttt{analysis.app}} (\texttt{AppMetadata})  
-  Contains the application metadata extracted from Jadx:
-  \begin{itemize}
-    \item \texttt{app\_name}: human-readable application label.
-    \item \texttt{package}: package name (application identifier).
-    \item \texttt{min\_sdk}, \texttt{target\_sdk}: minimum and target Android SDK levels.
-    \item \texttt{version\_name}, \texttt{version\_code}: versioning information of the analysed build.
-  \end{itemize}
-
-  \item \textbf{\texttt{analysis.analysisResults}} (\texttt{AnalysisResults})  
-  A list of per-crash assessments. Each element is an \texttt{AnalysisResult} object bundling:
-  \begin{itemize}
-    \item \texttt{crash} (\texttt{CrashSummary}): a normalised description of the crash:
-    \begin{itemize}
-      \item \texttt{ProcessTermination}: crash cause as reported by the runtime..
-      \item \texttt{StackTrace}: list of native frames involved in the crash.
-      \item \texttt{JavaCallGraph}: Java $\rightarrow$ JNI call chain leading to the JNI bridge method.
-      \item \texttt{JNIBridgeMethod}: JNI entry point associated with the crash.
-      \item \texttt{JavaCallGraph}: Java call chain leading to the JNI method.
-      \item \texttt{FuzzHarnessEntry}: fuzzer entry function used to drive inputs.
-      \item \texttt{ProgramEntry}: process entry point.
-      \item \texttt{LibMap}: native libraries involved in the crash.
-
-    \end{itemize}
-
-    \item \texttt{assessment} (\texttt{VulnResult}): the vulnerability triage produced by the \gls{llm}:
-    \begin{itemize}
-      \item \texttt{chain\_of\_thought}: a list of strings representing the step-by-step monologue that LLM thinks through before classifying.
-      \item \texttt{is\_vulnerable}: boolean verdict indicating whether the crash is likely a real vulnerability.
-      \item \texttt{confidence}: numerical confidence in $[0,1]$ associated with the verdict.
-      \item \texttt{reasons}: short textual bullets explaining the decision (e.g. missing null-termination, out-of-bounds read).
-      \item \texttt{cwe\_ids}: list of relevant CWE identifiers (e.g.\ \texttt{"CWE-125"} for out-of-bounds read).
-      \item \texttt{severity}: estimated impact level (\texttt{"low"}, \texttt{"medium"}, \texttt{"high"}, \texttt{"critical"} or \texttt{null} if unknown).
-      \item \texttt{affected\_libraries}: list of libraries implicated in the crash.
-      \item \texttt{recommendations}: concrete mitigation or follow-up actions (e.g.\ enforcing null-termination, adding bounds checks).
-      \item \texttt{assumptions}: explicit assumptions made by the model (e.g.\ nature of the input or control over certain parameters).
-      \item \texttt{limitations}: known gaps in the analysis (e.g.\ partial decompilation, missing source, lack of full context).
-      \item \texttt{evidence}: list of \texttt{EvidenceItem} objects, each optionally containing:
-        \begin{itemize}
-            \item \texttt{function}: function name relevant to the issue.
-            \item \texttt{address}: code address within the library (when available).
-            \item \texttt{file}: library or source file associated with the evidence.
-            \item \texttt{snippet}: short decompiled excerpt or code fragment.
-            \item \texttt{note}: explanation of why this snippet supports the classification
-        \end{itemize}
-
-       \item \texttt{Statistics}: basic metrics on the analysis.
-        \begin{itemize}
-            \item \texttt{time}: total analysis time.
-            \item \texttt{llm\_requests}: number of LLM requests.
-            \item \texttt{llm\_tool\_calls}: number of MCP tool calls.
-            \item \texttt{input\_tokens}: tokens sent to the LLM.
-            \item \texttt{output\_tokens}: tokens produced by the LLM.
-        \end{itemize}
-    \end{itemize}
-  \end{itemize}
-\end{itemize}
-
-This schema makes the output both human-readable and machine-consumable. 

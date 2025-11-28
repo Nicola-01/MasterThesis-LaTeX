@@ -175,6 +175,15 @@ The \gls{cvss} is an open, vendor-neutral framework for describing the intrinsic
 \paragraph{Relation}
 In triage and remediation workflows, \gls{cve} entries identify concrete vulnerabilities; each entry can be mapped to \gls{cwe} identifiers that explain the underlying weakness type; \gls{cvss} scores (often provided by downstream databases) express the vulnerability’s technical severity. Together, \gls{cwe}$\rightarrow$\gls{cve}$\rightarrow$\gls{cvss} forms a pipeline from root-cause taxonomy to instance tracking and severity quantification \cite{nvd-cve-process}.
 
+\section{Vulnerability Triage}
+
+Vulnerability triage is the process of assessing, prioritising, and deciding on the appropriate response for a set of identified software vulnerabilities~\cite{ThreatNG-vulnerability-triage}.  
+In practice, this means evaluating each potential issue to determine if it represents a real security risk, estimating its impact and exploitability, and selecting which findings deserve immediate attention or remediation.
+
+In the context of this thesis, the goal is to automate the triage phase: given a crash in a native library (detected via fuzz testing or dynamic analysis), the system combines dynamic crash data and static-analysis context to output a structured verdict.  
+This verdict includes not only whether the crash likely corresponds to a vulnerability, but also severity, vulnerability classification (e.g.\ via CWE IDs), supporting evidence, and—when applicable—a plausible exploitation path or mitigation suggestions.  
+
+
 \section{Reverse engineering}
 Reverse engineering in software is the analysis of binaries or bytecode to recover design and implementation information-disassembly, control/data flows, and higher-level structure, when source or specifications are incomplete or unavailable \cite{springer-sre-overview,samuelson1990re}. In practice, reverse engineering workflows combine a disassembler/decompiler with cross-reference search, symbol inspection, and targeted decompilation to produce evidence suitable for auditing and triage.
 

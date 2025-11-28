@@ -280,10 +280,10 @@ The F1-score ensures a lower overall score if either precision or recall diverge
 \begin{axis}[
     ybar stacked,
     ymin=0,
-    ymax=30,
+    ymax=25,
     bar width=20pt,
-    width=10cm,
-    height=7cm,
+    width=11cm,
+    height=8cm,
     ylabel={Count},
     symbolic x coords={TP,TN,FP,FN},
     xticklabels={
@@ -295,12 +295,17 @@ The F1-score ensures a lower overall score if either precision or recall diverge
     xtick=data,
     nodes near coords,
     nodes near coords align={vertical},
-    \legend{\strut With CG, \strut Without CG}
-    title={Triage Classification Outcomes},
+    legend style={
+        at={(0.97,0.97)},
+        anchor=north east,
+        draw=none,
+        fill=none
+    },
+    legend entries={{With Call Graph},{Without Call Graph}}
+    %title={Triage Classification Outcomes},
 ]
 \addplot coordinates {(TP,8) (TN,10) (FP,6) (FN,2)};
 \addplot coordinates {(TP,5) (TN,12) (FP,9) (FN,2)};
-%\addplot coordinates {(TP,1) (TN,23) (FP,17) (FN,3)};
 \end{axis}
 \end{tikzpicture}
 \caption{Distribution of classification outcomes across the dataset.}
@@ -320,10 +325,11 @@ This distribution suggests that the model favours recall—successfully detectin
  & \textbf{With CG} & \textbf{Without CG} & \textbf{Total} \\
 \hline
 \hline
-\textbf{Accuracy}  & 0.6491 & & \\
-\textbf{Precision} & 0.4516 & & \\
-\textbf{Recall}    & 0.8235 & & \\
-F1-\textbf{Score}  & 0.2917 & & \\
+
+\textbf{Accuracy}  & 0.6923 & 0.6071 & 0.6491\\
+\textbf{Precision} & 0.5714 & 0.3571 & 0.4516\\
+\textbf{Recall}    & 0.8000 & 0.7143 & 0.8235\\
+F1-\textbf{Score}  & 0.3333 & 0.4762& 0.2917\\
 \hline
 \end{tabular}
 \caption{Evaluation metrics computed from the classification results.}
