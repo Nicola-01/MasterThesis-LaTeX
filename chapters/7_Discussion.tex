@@ -9,12 +9,12 @@ The implemented pipeline demonstrates acceptable and promising operational perfo
 However, the total execution time per application depends heavily on fuzzer-generated crash count, the complexity of native stack traces, and the number of native libraries involved.  
 In applications with many or large native libraries, the overhead caused by importing and decompiling binaries can substantially increase the total runtime, this extra cost is due to the reverse-engineering tools, not the analysis itself.
 
-\section{Effect of Java Call Graph}
+\section{Effect of \glsxtrlong{jcg}}
 
-The comparison between analyses performed with or without the Java call graph yields a clear trade-off:
+The comparison between analyses performed with or without the \gls{jcg} yields a clear trade-off:
 \begin{myitemize}
-    \item When the \glsxtrlong{cg} is available (“With \glsxtrshort{cg}”), the model can leverage both native and Java-level context, producing more coherent and realistic vulnerability assessments. Under this configuration, the system achieves higher recall and maintains relatively few false negatives.
-    \item Without the \glsxtrlong{cg} (“Without \glsxtrshort{cg}”), the lack of Java-side context leads the model to over-approximate risks. The model tends to treat all inputs reaching native code as potentially attacker-controlled, resulting in a significantly higher number of false positives.
+    \item When the \glsxtrlong{jcg} is available (“With \glsxtrshort{jcg}”), the model can leverage both native and Java-level context, producing more coherent and realistic vulnerability assessments. Under this configuration, the system achieves higher recall and maintains relatively few false negatives.
+    \item Without the \glsxtrlong{jcg} (“Without \glsxtrshort{jcg}”), the lack of Java-side context leads the model to over-approximate risks. The model tends to treat all inputs reaching native code as potentially attacker-controlled, resulting in a significantly higher number of false positives.
 \end{myitemize}
 
 This confirms the hypothesis that integrating cross-layer context (Java + native) is essential to reduce spurious vulnerability reports while preserving the capacity to detect real issues.

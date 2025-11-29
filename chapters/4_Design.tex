@@ -27,7 +27,7 @@ The structured design therefore relies on a set of core data models, described b
 
 \begin{itemize}
     \item \textbf{CrashSummary} Represents a single crash extracted from the analysis report.\\  
-    It encapsulates key fields such as the native stack frames, JNI bridge method, a reconstructed Java call graph, the set of native libraries involved in the stack trace, among other fields..  
+    It encapsulates key fields such as the native stack frames, JNI bridge method, a reconstructed \gls{jcg}, the set of native libraries involved in the stack trace, among other fields..  
     %This model provides to the agent all the information needed for classification.
 
     \item \textbf{AppMetadata}  
@@ -89,7 +89,7 @@ It instructs the model to behave as a vulnerability analyst with access to stati
 Clear behavioural rules constrain how the agent must reason about the crash, how it should handle missing information, and how it should justify its conclusions.
 
 \paragraph{2. Interpretation of inputs.}
-The prompt describes in detail the meaning and expected use of the inputs provided for each crash: the native stack trace, the JNI bridge method, the Java call graph, and the list of relevant libraries.  
+The prompt describes in detail the meaning and expected use of the inputs provided for each crash: the native stack trace, the JNI bridge method, the \gls{jcg}, and the list of relevant libraries.  
 The model is instructed to integrate these artefacts into a coherent execution path.  
 In particular, it must reconstruct the control flow starting from the point of failure and reason backwards to identify the root cause, assessing whether the crash is plausibly reachable and whether user-controlled data may influence the faulting operation.
 
@@ -130,7 +130,7 @@ Figure~\ref{fig:pipeline_overview} provides an overview of the full workflow, wh
 \begin{figure}[!ht]
     \centering
     \scalebox{0.8}{\input{tikzpicture/pipeline_design}}
-    \caption{Overview of the triage pipeline combining POIROT fuzzing, crash analysis, and \gls{mcp}-based inspections.}
+    \caption[Overview of the triage pipeline]{Overview of the triage pipeline, combining POIROT fuzzing, crash analysis, and \glsxtrshort{mcp}-based inspections.}
     \label{fig:pipeline_overview}
 \end{figure}
 
@@ -146,7 +146,7 @@ For each crash, the system constructs a corresponding \texttt{CrashSummary} obje
 \begin{itemize}
     \item \textbf{Native Stack Trace}: the raw output produced by POIROT, consisting of the sequence of native frames leading to the crash.
     \item \textbf{JNI Bridge Method}: identified by decoding the \gls{jni} signature extracted from the crash, allowing the system to locate the corresponding Java declaration within the \gls{apk} (Listing~\ref{lst:JNI}).
-    \item \textbf{Java call graph}: obtained by filtering the FlowDroid-generated call graph\footnote{\url{https://github.com/secure-software-engineering/FlowDroid}} to retain only the paths relevant to the crash.  
+    \item \textbf{\glsxtrlong{jcg}}: obtained by filtering the FlowDroid-generated \gls{jcg}\footnote{\url{https://github.com/secure-software-engineering/FlowDroid}} to retain only the paths relevant to the crash.  
     This helps the \gls{llm} analyse the Java-side control flow more easily and increases the coverage of the application during triage.
     \item \textbf{Libraries and methods map}: using the stack-trace information, the tool identifies which native library contains each frame involved in the crash (including the JNI bridge). This provides the \gls{llm} with a compact map of all methods in the stack trace and the \texttt{.so} file in which each one resides.
 \end{itemize}
@@ -175,7 +175,7 @@ It also informs the agent of the available \glspl{mcp} and clarifies when tool c
 \subsection{Crash Prompting}
 
 For each crash, a dedicated \emph{user prompt} provides the corresponding \texttt{CrashSummary}, which contains all the information required by the \gls{llm} to perform the analysis.  
-In addition to the native stack trace, the \texttt{CrashSummary} includes the filtered Java call graph leading to the JNI entry point, as well as the mapping of libraries and methods involved in the fault.  
+In addition to the native stack trace, the \texttt{CrashSummary} includes the filtered \gls{jcg} leading to the JNI entry point, as well as the mapping of libraries and methods involved in the fault.  
 This ensures that the model receives a concise yet complete representation of the execution path, covering both the Java and native layers relevant to the crash.
 
 In case of multiple crash of the same method, the agent will remain the same, is only provide with the new crash to classified as a user prompt, but the agent it's not reseted, so it already known some apk/librari stracture

@@ -159,8 +159,8 @@
 \usepackage[titletoc]{appendix}
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftchapfont}{\normalsize \scshape}
-\renewcommand\listfigurename{Listing of figures}
-\renewcommand\listtablename{Listing of tables}
+\renewcommand\listfigurename{List of figures}
+\renewcommand\listtablename{List of tables}
 
 % Endmatter
 \renewcommand{\setthesection}{\arabic{chapter}.A\arabic{section}}
@@ -243,7 +243,7 @@
 	\abstractpage
 	\tableofcontents
 	\phantomsection
-	\clearpage
+	\cleardoublepage
 
 	% figure listing - required if you have any figures
 	\phantomsection
@@ -364,8 +364,8 @@
 
 \newcommand{\acronyms}{
 	\phantomsection
-	\addcontentsline{toc}{chapter}{Listing of acronyms}
-	\chapter*{Listing of acronyms}
+	\addcontentsline{toc}{chapter}{List of acronyms}
+	\chapter*{List of acronyms}
 	\input{frontmatter/abbr.tex}
 }
 
@@ -562,3 +562,26 @@ folder style/.style={draw=foldercolor!80!black, top color=foldercolor!40, bottom
     }{
     \end{enumerate}
     }
+
+
+\newcommand\MyBoxColor[4]{%
+  \fcolorbox{black}{#3!#4}{%
+    \lower0.75cm
+      \vbox to 1.7cm{\vfil
+        \hbox to 1.7cm{\hfil
+          \parbox{1.4cm}{\centering #1\\#2}%
+        \hfil}
+      \vfil}%
+  }%
+}
+
+% Versione con default: gray al 20%
+\newcommand\MyBox[2]{%
+  \MyBoxColor{#1}{#2}{gray}{20}%
+}
+
+\definecolor{lighBlue}{HTML}{95d0fc}
+
+\newcommand\MyGradeColor[2]{%
+  \MyBoxColor{#1}{(#2~\%)}{lighBlue}{#2}%
+}

@@ -8,21 +8,21 @@
 The evaluation of the tool was carried out on a local machine.  
 The experimental environment consisted of:
 
-\begin{itemize}
+\begin{myitemize}
     \item Local machine running \textbf{Ubuntu 25.04};
     %\item Docker container based on \textbf{Ubuntu 24.04};
     \item \textbf{Ghidra~11.4.2} (latest version at the time of evaluation);
     \item \textbf{Jadx~1.5.3} (latest version at the time of evaluation);
     \item \textbf{GhidraMCP~1.4} (latest version at the time of evaluation);
     \item \textbf{jadx-ai-mcp~4.0.0} (latest version at the time of evaluation).
-\end{itemize}
+\end{myitemize}
 
 \subsection{AWS for POIROT}
 
 The extraction of crashes used for this evaluation is described in Chapter~\ref{chp:preliminaries}, and the corresponding execution environment is detailed in Chapter~\ref{chp:preliminaries_env}.  
 All POIROT runs were executed on an AWS EC2 instance configured for large-scale fuzzing.
 
-\subsection{LLM Used}
+\subsection{\glsxtrshort{llm} Used}
 
 The evaluation was conducted using the OpenAI model GPT-5.1.  
 This model represented one of the most capable \glspl{llm} available at the time of testing and offered reliable support for \gls{mcp}-based tool use.
@@ -41,8 +41,8 @@ These apps were selected from the POIROT dataset and filtered based on the run p
 \resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l||l|l|}
 \hline
-\multicolumn{4}{|c|}{\textbf{Applications Used for Evaluation}} \\
-\hline
+%\multicolumn{4}{|c|}{\textbf{Applications Used for Evaluation}} \\
+%\hline
 \textbf{App} & \textbf{Version} & \textbf{App} & \textbf{Version} \\
 \hline
 br.com.pedidos10 & 1.16.4 & ca.radioplayer.android & 6.3.420.1 \\
@@ -73,14 +73,12 @@ tw.com.taishinbank.ccapp & 5.631 & tw.gov.tra.twtraffic & 2.1.2 \\
 \label{tab:apps}
 \end{table}
 
-\textcolor{red}{Devo scrivere quali sono lastversion e quali quelle di circa 2023? }
-
 Across all these applications, a total of 59 methods were identified, each associated with one or more crashes.  
-In total, the dataset contained 134 crash instances.
+%In total, the dataset contained 134 crash instances.
 
 \subsection{Execution Time}
 
-Table~\ref{tab:apps_time} reports the execution time for each application.  
+Table~\ref{tab:apps_time} reports the \gls{llm}-analysis time for each application.  
 The total time per APK depends primarily on the \emph{number of crashes} produced by POIROT, as well as the number of relevant libraries and the complexity of the stack trace.
 Note that the reported time covers only the \gls{llm} classification phase and does not include the startup time of Ghidra, which depends solely on the number and size of the native libraries being imported.
 
@@ -89,8 +87,8 @@ Note that the reported time covers only the \gls{llm} classification phase and d
 \resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l||l|l|}
 \hline
-\multicolumn{4}{|c|}{\textbf{Execution LLM Time per Application}} \\
-\hline
+%\multicolumn{4}{|c|}{\textbf{Execution LLM Time per Application}} \\
+%\hline
 \textbf{App} & \textbf{Time (s)} & \textbf{App} & \textbf{Time (s)} \\
 \hline
 br.com.pedidos10 & 80 & ca.radioplayer.android & 480 \\ 
@@ -121,7 +119,7 @@ tw.com.taishinbank.ccapp & 98 & tw.gov.tra.twtraffic & 78 \\
 \hline
 \end{tabular}
 }
-\caption{Approximate execution time per application.}
+\caption{LLM analysis time per application.}
 \label{tab:apps_time}
 \end{table}
 
@@ -139,8 +137,8 @@ Table~\ref{tab:apps_tokens} reports input and output token usage for each applic
 \resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l|l||l|l|l|}
 \hline
-\multicolumn{6}{|c|}{\textbf{Token Usage per Application}} \\
-\hline
+%\multicolumn{6}{|c|}{\textbf{Token Usage per Application}} \\
+%\hline
 \textbf{App} & \textbf{Input} & \textbf{Output} &
 \textbf{App} & \textbf{Input} & \textbf{Output} \\
 \hline
@@ -190,8 +188,8 @@ Table~\ref{tab:apps_requests} reports, for each application, the number of LLM r
 \resizebox{1\textwidth}{!}{
 \begin{tabular}{|l|l|l||l|l|l|}
 \hline
-\multicolumn{6}{|c|}{\textbf{LLM request and Tool Calls per Application}} \\
-\hline
+%\multicolumn{6}{|c|}{\textbf{LLM request and Tool Calls per Application}} \\
+%\hline
 \textbf{App} & \textbf{Input} & \textbf{Output} &
 \textbf{App} & \textbf{Input} & \textbf{Output} \\
 \hline
@@ -234,10 +232,10 @@ tw.com.taishinbank.ccapp & 4 & 10 & tw.gov.tra.twtraffic & 5 & 13 \\
 
 
 \section{Evaluation Metrics}
-\textcolor{red}{non se serve specificare le metriche}
+%\textcolor{red}{non se serve specificare le metriche}
 
 
-To objectively assess the performance of the LLM-based triage system, standard information retrieval metrics derived from a confusion matrix are employed. Given the binary nature of the classification task—determining whether a crash is a vulnerability or a benign issue—the possible outcomes are defined as follows:
+To objectively assess the performance of the \gls{llm}-based triage system, standard information retrieval metrics derived from a confusion matrix are employed. Given the binary nature of the classification task, determining whether a crash is a vulnerability or not, the possible outcomes are defined as follows:
 
 \begin{itemize}
     \item \textbf{True Positive (TP):} A vulnerability correctly identified by the model. The crash represents a security risk, and the system correctly classified it as such (\texttt{is\_vulnerable: true}).
@@ -249,18 +247,22 @@ To objectively assess the performance of the LLM-based triage system, standard i
 Based on these definitions, the following metrics were calculated:
 
 \paragraph{Accuracy}
-Accuracy measures the overall correctness of the model across all predictions. While useful, it can be misleading in datasets with significant class imbalance (e.g., where benign crashes vastly outnumber vulnerabilities).
+Accuracy quantifies how many of the analysed crashes were assigned the correct label.  
+It provides an overall view of the system’s correctness across both vulnerable and non-vulnerable cases.
+
 \[
 \text{Accuracy} = \frac{\text{TP} + \text{TN}}{\text{TP} + \text{TN} + \text{FP} + \text{FN}}
 \]
 
-\paragraph{Precision} Precision quantifies the reliability of the positive predictions. In the context of this thesis, high precision implies that when the tool flags a crash as a vulnerability, it is highly likely to be a genuine threat, thereby reducing the manual verification effort for analysts.
+\paragraph{Precision} Precision quantifies the reliability of the positive predictions. In the context of this thesis, high precision implies that when the tool flags a crash as a vulnerability, it is highly likely to be a real threat.
 \[
 \text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}
 \]
 
 \paragraph{Recall}
-Recall measures the system's ability to detect all actual vulnerabilities. High recall is critical in security contexts to ensure that dangerous flaws are not overlooked (minimizing False Negatives).
+Recall measures how effectively the system identifies all crashes that correspond to real vulnerabilities.  
+It captures the proportion of dangerous flaws that the model successfully flags.  
+
 \[
 \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}
 \]
@@ -274,7 +276,8 @@ The F1-score ensures a lower overall score if either precision or recall diverge
 
 \section{Results}
 
-\begin{figure}[ht]
+\begin{comment}
+    \begin{figure}[ht]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
@@ -308,41 +311,87 @@ The F1-score ensures a lower overall score if either precision or recall diverge
 \addplot coordinates {(TP,5) (TN,12) (FP,9) (FN,2)};
 \end{axis}
 \end{tikzpicture}
-\caption{Distribution of classification outcomes across the dataset.}
+
+
 \label{fig:classification_outcomes}
+\end{figure}
+\end{comment}
+
+\begin{figure}
+    \centering
+    \input{tikzpicture/classificationResult}
+    \caption[Performance metrics for the vulnerability classification task]%
+{Performance metrics for the vulnerability classification task.}
+    \label{fig:classification_outcomes}
 \end{figure}
 
 
-The bar chart in Figure~\ref{fig:classification_outcomes} summarises how the system classified the 134 crash instances in the dataset.  
-Most predictions fall into the True Negative (23) and False Positive (17) categories, indicating that the model frequently flagged benign crashes as vulnerabilities.  
-Conversely, the system correctly identified 14 genuine vulnerabilities (True Positives) and missed only 3 (False Negatives).  
-This distribution suggests that the model favours recall—successfully detecting most real vulnerabilities—but at the cost of a higher number of false alarms.
+The confusion matrices in Figure~\ref{fig:classification_outcomes} summarise how the system classified the 59 methods in the dataset, separating the two experimental conditions (with and without the \glsxtrlong{jcg}) and also reporting the aggregated results.
+
+When the call graph is available, the system correctly identifies 8 vulnerabilities (TP) and misses 2 (FN), while producing 7 false alarms (FP) and 12 correct rejections (TN).  
+Without the call graph, the model still detects 5 vulnerabilities and misses 2, but generates a higher number of false positives (9), with 12 true negatives.
+
+Considering the dataset as a whole, the system reports 13 true positives and 24 true negatives, against 16 false positives and 4 false negatives.  
+This distribution shows a clear tendency towards recall: the model successfully captures most real vulnerabilities, but at the cost of an increased number of false alarms, particularly when Java-side context is absent.
+
 
 \begin{table}[ht]
 \centering
-\begin{tabular}{|l|c|c|c|}
-\hline
- & \textbf{With CG} & \textbf{Without CG} & \textbf{Total} \\
+\begin{tabular}{|p{2cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
+\hline 
+\centering \textbf{Metric} 
+& \centering \textbf{With \glsxtrshort{jcg}} 
+& \centering \textbf{Without \glsxtrshort{jcg}} 
+& \centering \textbf{All APKs} \tabularnewline
 \hline
 \hline
 
-\textbf{Accuracy}  & 0.6923 & 0.6071 & 0.6491\\
-\textbf{Precision} & 0.5714 & 0.3571 & 0.4516\\
-\textbf{Recall}    & 0.8000 & 0.7143 & 0.8235\\
-F1-\textbf{Score}  & 0.3333 & 0.4762& 0.2917\\
+\centering \textbf{Accuracy}  
+& \centering 69.23~\% 
+& \centering 60.71~\% 
+& \centering 64.91~\% \tabularnewline
+
+\centering \textbf{Recall}    
+& \centering 57.14~\% 
+& \centering 35.71~\% 
+& \centering 44.83~\% \tabularnewline
+
+\centering \textbf{Precision} 
+& \centering 80.00~\% 
+& \centering 71.43~\% 
+& \centering 76.47~\% \tabularnewline
+
+\centering \textbf{F1-Score}  
+& \centering 66.67~\% 
+& \centering 47.62~\% 
+& \centering 56.52~\% \tabularnewline
 \hline
 \end{tabular}
+
 \caption{Evaluation metrics computed from the classification results.}
 \label{tab:eval_metrics}
 \end{table}
 
 
+Figure~\ref{fig:classification_outcomes} summarises the overall performance of the system. 
+The aggregated accuracy (66.18~\%) indicates that roughly two-thirds of all crash classifications match the ground truth. 
+A closer look at the two configurations reveals that accuracy is slightly higher when the call graph is available (68.75~\%) than when it is not (65.38~\%), suggesting that access to Java–to–native context provides a modest but tangible benefit.
 
-Table~\ref{tab:eval_metrics} reports the derived performance metrics.  
-The overall accuracy (0.6491) reflects the proportion of correct classifications across all crashes, though it is influenced by the imbalance between benign and vulnerable samples.  
-Precision (0.4516) is relatively low, consistent with the high number of False Positives observed in the chart; many issues flagged as vulnerabilities did not correspond to real security risks.  
-Recall (0.8235) is considerably higher, showing that the system is effective at capturing genuine vulnerabilities and rarely overlooks dangerous cases.  
-However, the F1-score (0.2917)—the harmonic mean of precision and recall—is low, indicating an uneven balance between detecting vulnerabilities and avoiding false alarms.
+Recall shows a more pronounced difference.  
+With the call graph, the system successfully recovers 80.00~\% of all true vulnerabilities, whereas without it recall drops to 71.43~\%. 
+This confirms that supplying the \gls{llm} with a clear Java-to-native execution chain helps avoid missing dangerous cases.
 
-Overall, these results show that the current implementation is conservative in its judgement, prioritising the detection of potential vulnerabilities over strict precision.  
-While this behaviour is desirable in contexts where missing a vulnerability is more costly than over-reporting, it also highlights the need for improvements aimed at reducing false positives, such as integrating specialised models, adopting RAG-based grounding, or leveraging persistent agents as discussed in Chapter~\ref{chp:futureWork}.
+Precision behaves differently.  
+When operating without the call graph, the model becomes more conservative, achieving 35.71~\% precision compared to 53.33~\% in the “With CG” setting.  
+The absence of Java context makes the model less willing to flag crashes as vulnerable, reducing false positives but also limiting its capacity to identify real issues.
+
+Overall, the F1–score highlights this trade-off.  
+With the call graph the system reaches 64.00~\%, whereas without it the score decreases to 47.62~\%, reflecting the reduced ability to balance precision and recall.  
+The combined F1-score across all crashes is 56.52~\%, indicating that the current implementation prioritises the detection of potential vulnerabilities (high recall) over precision.
+
+In summary, call–graph information significantly improves both the completeness and consistency of the triage process. 
+Removing this context leads to a more conservative but less comprehensive analysis, ultimately reducing reliability.
+
+
+%Overall, these results show that the current implementation is conservative in its judgement, prioritising the detection of potential vulnerabilities over strict precision.  
+%While this behaviour is desirable in contexts where missing a vulnerability is more costly than over-reporting, it also highlights the need for improvements aimed at reducing false positives, such as integrating specialised models, adopting RAG-based grounding, or leveraging persistent agents as discussed in Chapter~\ref{chp:futureWork}.

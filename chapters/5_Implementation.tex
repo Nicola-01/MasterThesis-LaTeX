@@ -40,7 +40,7 @@ as illustrated in Figure~\ref{fig:implementation_structure}.
     \centering
     %\includegraphics[width=\textwidth]{implementation_structure.pdf}
     \scalebox{0.7}{\input{tikzpicture/program-structure}}
-    \caption{Structure of the implementation (modules, data flow, and orchestration logic).}
+    \caption[Structure of the implementation]{Structure of the implementation, modules, data flow, and orchestration logic.}
     \label{fig:implementation_structure}
 \end{figure}
 
@@ -85,7 +85,7 @@ Each prompt serves a distinct function and is tailored to the type of informatio
     \item \texttt{VulnDetection\_prompt.py}  
     Encodes the complete vulnerability-triage logic.  
     It specifies what constitutes a vulnerability, the backward data-flow reasoning process, the conditions for exploitability, and the full JSON schema required for the output.  \\
-    A variant of this prompt is used when the Java call graph is unavailable; in this case, the model is not required to reason about the Java-side control flow.  
+    A variant of this prompt is used when the \gls{jcg} is unavailable; in this case, the model is not required to reason about the Java-side control flow.  
     Using the standard prompt in such situations proved problematic, as models without Java context tended to treat all inputs as attacker-controlled, leading to misclassifications.
 
     \item \texttt{Shimming\_prompts.py}  
@@ -426,12 +426,12 @@ This command launches the Ghidra \gls{gui} (see Figure~\ref{fig:ghidraGUI}) and 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=12cm]{figures/GhidraGUI.jpeg}
-    \caption{Ghidra \gls{gui} after being launched via \texttt{ghidra-cli}.}
+    \includegraphics[width=12cm]{figures/GhidraGUI.png}
+    \caption[Ghidra GUI]{Ghidra \glsxtrshort{gui} after being launched via \texttt{ghidra-cli}, with multiple .so files.}
     \label{fig:ghidraGUI}
 \end{figure}
 
-However, the Ghidra MCP server only becomes available once the imported binary is opened inside the CodeBrowser (the main interface opened by the dragon icon), and this action cannot be performed via the command line.
+However, the Ghidra MCP server only becomes available once an imported binary is opened inside the CodeBrowser (interface opened by the dragon icon), and this action cannot be performed via the command line.
 
 To fully automate this process, the helper module \texttt{ghidraMCP\_helper\_functions.py} was developed.  
 This module uses \texttt{wmctrl} to manage desktop windows and \texttt{pyautogui} to simulate keyboard interactions (e.g.\ \texttt{Tab}, \texttt{Down Arrow}, \texttt{Enter}) in order to programmatically select and open imported binaries within the GUI.  
@@ -652,7 +652,7 @@ After running POIROT on a batch of applications, the resulting directory structu
 \begin{figure}
     \centering
     \scalebox{0.8}{\input{tikzpicture/targetAPKS}}
-    \caption{Directory structure of the target APKs as produced by POIROT, including extracted libraries and reproduced crash outputs.}
+    \caption[Directory structure of POIROT's output]{Directory structure of the target APKs as produced by POIROT, including extracted libraries and reproduced crash outputs.}
     \label{fig:poirot_output}
 \end{figure}
 
@@ -684,27 +684,27 @@ Moreover, Ghidra cannot reliably open a large number of libraries within the sam
 The resulting filtered map is then recorded in the \texttt{CrashSummary} object associated with the crash.  
 This enriched crash descriptor is subsequently passed to the triage agent, ensuring that the analysis stage focuses exclusively on the libraries that may have contributed to the fault.
 
-\subsection{Java Call Graph}
+\subsection{\glsxtrlong{jcg}}
 
-A second input provided to the model through the \texttt{CrashSummary} object is the Java call graph.  
+A second input provided to the model through the \texttt{CrashSummary} object is the \gls{jcg}.  
 The purpose of this artefact is to reconstruct the sequence of Java method invocations that lead to the JNI entry point responsible for calling the native function in which the crash occurred.  
-While the native stack trace already describes the execution path within the \texttt{.so} file, the Java call graph complements it with the higher-level control flow within the application.
+While the native stack trace already describes the execution path within the \texttt{.so} file, the \gls{jcg} complements it with the higher-level control flow within the application.
 
 The extraction is performed in two phases:
 
 \begin{enumerate}
     \item \textbf{Generation of a global flow graph.}  
-    A complete flow graph of the application is first generated using FlowDroid\footnote{https://github.com/secure-software-engineering/FlowDroid}, which statically analyses the APK and produces a comprehensive call graph covering all possible execution paths.  
+    A complete flow graph of the application is first generated using FlowDroid\footnote{https://github.com/secure-software-engineering/FlowDroid}, which statically analyses the APK and produces a comprehensive \gls{jcg} covering all possible execution paths.  
     The resulting structure is stored in a large JSON file. 
 
     \item \textbf{Efficient filtering using \texttt{rg}.}  
     Because the FlowDroid JSON may exceed multiple gigabytes, directly parsing it in memory would be inefficient.  
     Instead, the \texttt{rg} (ripgrep) utility is used to perform fast pattern searches over the file.  
     This allows the pipeline to extract only the subset of call edges relevant to the method chain leading to the JNI bridge.  
-    The result is a compact, filtered call graph that contains only the calls involved in the crash path.
+    The result is a compact, filtered \gls{jcg} that contains only the calls involved in the crash path.
 \end{enumerate}
 
-This filtered Java call graph is then attached to the \texttt{CrashSummary}, enabling the \gls{llm} to reason about both native- and Java-level execution paths.  
+This filtered \gls{jcg} is then attached to the \texttt{CrashSummary}, enabling the \gls{llm} to reason about both native- and Java-level execution paths.  
 In this way, the model can reconstruct the complete control-flow chain leading to the fault, rather than relying solely on the native stack trace generated by POIROT.
 
 \begin{comment}

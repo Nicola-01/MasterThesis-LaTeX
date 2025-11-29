@@ -1,0 +1,50 @@
+\begin{subfigure}{0.32\textwidth}
+\scalebox{0.75}{
+\begin{tabular}{c >{\bfseries}r @{\hspace{0.7em}}c 
+                @{\hspace{0.4em}}c @{\hspace{0.7em}}l}
+  \multirow{10}{*}{\rotatebox{90}{
+      \parbox{6.2cm}{\bfseries\centering Actual\\}}} &
+      & \multicolumn{2}{c}{\hspace*{-1em}\bfseries Predict} & \\
+  & & \bfseries P & \bfseries N \\
+  & P$'$ & \MyGradeColor{8}{28} & \MyGradeColor{2}{7} \\[2.1em]
+  & N$'$ & \MyGradeColor{7}{24} & \MyGradeColor{12}{41} \\
+% & P$'$ & \MyGradeColor{True}{Positive}{1} & \MyGradeColor{False}{Negative}{1} \\[2.1em]
+% & N$'$ & \MyGradeColor{False}{Positive}{1} & \MyGradeColor{True}{Negative}{99} \\
+\end{tabular}
+}
+\subcaption{Evaluation on APKs that include a JFG}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\textwidth}
+\scalebox{0.75}{
+\begin{tabular}{c >{\bfseries}r @{\hspace{0.7em}}c 
+                @{\hspace{0.4em}}c @{\hspace{0.7em}}l}
+  \multirow{10}{*}{\rotatebox{90}{
+      \parbox{6.2cm}{\bfseries\centering Actual\\}}} &
+      & \multicolumn{2}{c}{\hspace*{-1em}\bfseries Predict} & \\
+  & & \bfseries P & \bfseries N \\
+  & P$'$ & \MyGradeColor{5}{18} & \MyGradeColor{2}{7} \\[2.1em]
+  & N$'$ & \MyGradeColor{9}{32} & \MyGradeColor{12}{43} \\
+% & P$'$ & \MyGradeColor{True}{Positive}{1} & \MyGradeColor{False}{Negative}{1} \\[2.1em]
+% & N$'$ & \MyGradeColor{False}{Positive}{1} & \MyGradeColor{True}{Negative}{99} \\
+\end{tabular}
+}
+\subcaption{Evaluation on APKs that do not include a JFG}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.32\textwidth}
+\scalebox{0.75}{
+\begin{tabular}{c >{\bfseries}r @{\hspace{0.7em}}c 
+                @{\hspace{0.4em}}c @{\hspace{0.7em}}l}
+  \multirow{10}{*}{\rotatebox{90}{
+      \parbox{6.2cm}{\bfseries\centering Actual\\}}} &
+      & \multicolumn{2}{c}{\hspace*{-1em}\bfseries Predict} & \\
+  & & \bfseries P & \bfseries N \\
+  & P$'$ & \MyGradeColor{13}{23} & \MyGradeColor{4}{7} \\[2.1em]
+  & N$'$ & \MyGradeColor{16}{28} & \MyGradeColor{24}{42} \\
+% & P$'$ & \MyGradeColor{True}{Positive}{1} & \MyGradeColor{False}{Negative}{1} \\[2.1em]
+% & N$'$ & \MyGradeColor{False}{Positive}{1} & \MyGradeColor{True}{Negative}{99} \\
+\end{tabular}
+}
+\subcaption{Overall evaluation across the full set of APKs}
+\end{subfigure}
