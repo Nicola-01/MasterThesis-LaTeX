@@ -4,6 +4,15 @@
 This thesis has shown that an \gls{llm} equipped with \gls{mcp}-based access to Jadx and Ghidra can assist in the triage of crashes originating from native libraries in Android applications.  
 Several implementations could be developed in the future, particularly to further improve the quality of the triage.
 
+\section{Improving Crash Context and Input Visibility}
+
+The results suggest that LLM-based triage, when enriched with context retrieved via \gls{mcp} tools, becomes significantly more informative and reliable during crash analysis.
+
+A key limitation of the current implementation is the lack of visibility into the inputs that triggered each crash.  
+Since POIROT does not expose the generated test cases or more detailed execution logs, the model is forced to reason solely from stack traces and decompiled code, without knowing which specific input conditions caused the failure.
+
+Providing richer execution context—such as the exact fuzzer input, argument values or runtime logs—would enable the \gls{llm} to make more grounded and accurate classifications.  
+Such information could help the model distinguish crashes triggered by malformed or unrealistic inputs from those that reflect genuine, exploitable vulnerabilities.  
 
 \section{Use of Specialised Models for Triage}
 

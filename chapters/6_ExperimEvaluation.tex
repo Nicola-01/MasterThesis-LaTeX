@@ -1,6 +1,12 @@
 \chapter{Evaluation}
 \label{chp:eval}
 
+This chapter evaluates the effectiveness, reliability, and overall behaviour of the proposed triage system.  
+The goal is to assess how well the \gls{llm}-based approach classifies crashes and how the availability of additional program context, i.e. \gls{jcg}, influences its decisions.  
+The chapter presents the experimental setup, the selected test applications, and a quantitative evaluation based on standard classification metrics.  
+The results provide insight into the strengths and limitations of the current implementation and form the basis for the discussion in the following chapter.
+
+
 \section{Experimental Setup}
 
 %, using the Docker-based environment described in Chapter~\ref{chp:docker}.
@@ -254,68 +260,35 @@ It provides an overall view of the system’s correctness across both vulnerable
 \text{Accuracy} = \frac{\text{TP} + \text{TN}}{\text{TP} + \text{TN} + \text{FP} + \text{FN}}
 \]
 
-\paragraph{Precision} Precision quantifies the reliability of the positive predictions. In the context of this thesis, high precision implies that when the tool flags a crash as a vulnerability, it is highly likely to be a real threat.
+\paragraph{Precision} Precision quantifies the reliability of the positive predictions. 
+Indicates how often a crash flagged as vulnerable is indeed a real vulnerability.
+
 \[
 \text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}
 \]
 
 \paragraph{Recall}
 Recall measures how effectively the system identifies all crashes that correspond to real vulnerabilities.  
-It captures the proportion of dangerous flaws that the model successfully flags.  
+Captures the model’s ability to avoid missing true security-relevant issues.  
+Indicates how many actual vulnerabilities the system successfully detects.
+
 
 \[
 \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}
 \]
 
 \paragraph{F1-Score}
-For the evaluation, the F1-score was selected as the primary metric. This measure is commonly employed in classification settings because it offers a single value that reflects the trade-off between precision and recall, which is especially important when the distribution of classes is unbalanced or when both false positives and false negatives carry comparable weight. The F1-score is defined as the harmonic mean of precision and recall:
+The F1-score provides a single value that captures the trade-off between precision and recall.  
+It reflects the balance between detecting vulnerabilities and avoiding false alarms.
+
 \[
 \mathrm{F1} = 2 \cdot \frac{\text{precision} \cdot \text{recall}}{\text{precision} + \text{recall}}
 \]
-The F1-score ensures a lower overall score if either precision or recall diverges significantly, even if one of the two is high, providing a balanced view of the model's effectiveness.
 
 \section{Results}
+\label{chp:result}
 
-\begin{comment}
-    \begin{figure}[ht]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-    ybar stacked,
-    ymin=0,
-    ymax=25,
-    bar width=20pt,
-    width=11cm,
-    height=8cm,
-    ylabel={Count},
-    symbolic x coords={TP,TN,FP,FN},
-    xticklabels={
-        {True~Positive},
-        {True~Negative},
-        {False~Positive},
-        {False~Negative}
-    },
-    xtick=data,
-    nodes near coords,
-    nodes near coords align={vertical},
-    legend style={
-        at={(0.97,0.97)},
-        anchor=north east,
-        draw=none,
-        fill=none
-    },
-    legend entries={{With Call Graph},{Without Call Graph}}
-    %title={Triage Classification Outcomes},
-]
-\addplot coordinates {(TP,8) (TN,10) (FP,6) (FN,2)};
-\addplot coordinates {(TP,5) (TN,12) (FP,9) (FN,2)};
-\end{axis}
-\end{tikzpicture}
-
-
-\label{fig:classification_outcomes}
-\end{figure}
-\end{comment}
+The confusion matrices in Figure~\ref{fig:classification_outcomes} summarise how the system classified the 59 methods in the dataset, separating the two experimental conditions (with and without the \glsxtrlong{jcg}) and also reporting the aggregated results.
 
 \begin{figure}
     \centering
@@ -325,8 +298,7 @@ The F1-score ensures a lower overall score if either precision or recall diverge
     \label{fig:classification_outcomes}
 \end{figure}
 
-
-The confusion matrices in Figure~\ref{fig:classification_outcomes} summarise how the system classified the 59 methods in the dataset, separating the two experimental conditions (with and without the \glsxtrlong{jcg}) and also reporting the aggregated results.
+\medskip
 
 When the call graph is available, the system correctly identifies 8 vulnerabilities (TP) and misses 2 (FN), while producing 7 false alarms (FP) and 12 correct rejections (TN).  
 Without the call graph, the model still detects 5 vulnerabilities and misses 2, but generates a higher number of false positives (9), with 12 true negatives.
@@ -347,24 +319,24 @@ This distribution shows a clear tendency towards recall: the model successfully 
 \hline
 
 \centering \textbf{Accuracy}  
-& \centering 69.23~\% 
+& \centering 70.97~\% 
 & \centering 60.71~\% 
-& \centering 64.91~\% \tabularnewline
+& \centering 66.10~\% \tabularnewline
 
-\centering \textbf{Recall}    
-& \centering 57.14~\% 
+\centering \textbf{Precision}    
+& \centering 56.25~\% 
 & \centering 35.71~\% 
-& \centering 44.83~\% \tabularnewline
+& \centering 46.67~\% \tabularnewline
 
-\centering \textbf{Precision} 
-& \centering 80.00~\% 
+\centering \textbf{Recall} 
+& \centering 81.82~\% 
 & \centering 71.43~\% 
-& \centering 76.47~\% \tabularnewline
+& \centering 77.78~\% \tabularnewline
 
 \centering \textbf{F1-Score}  
 & \centering 66.67~\% 
 & \centering 47.62~\% 
-& \centering 56.52~\% \tabularnewline
+& \centering 58.33~\% \tabularnewline
 \hline
 \end{tabular}
 
@@ -372,26 +344,19 @@ This distribution shows a clear tendency towards recall: the model successfully 
 \label{tab:eval_metrics}
 \end{table}
 
+Table~\ref{tab:eval_metrics} summarises the overall performance of the system under the two conditions.  
+The aggregated accuracy (66.10~\%) indicates that roughly two-thirds of all crash classifications match the ground truth.  
 
-Figure~\ref{fig:classification_outcomes} summarises the overall performance of the system. 
-The aggregated accuracy (66.18~\%) indicates that roughly two-thirds of all crash classifications match the ground truth. 
-A closer look at the two configurations reveals that accuracy is slightly higher when the call graph is available (68.75~\%) than when it is not (65.38~\%), suggesting that access to Java–to–native context provides a modest but tangible benefit.
+Accuracy is higher when the Java Call Graph is available (70.97~\%) than when it is not (60.71~\%), suggesting that access to Java-to-native context generally improves the reliability of the decisions.  
 
-Recall shows a more pronounced difference.  
-With the call graph, the system successfully recovers 80.00~\% of all true vulnerabilities, whereas without it recall drops to 71.43~\%. 
-This confirms that supplying the \gls{llm} with a clear Java-to-native execution chain helps avoid missing dangerous cases.
+Precision also benefits from the additional Java-side context.  
+In the ``With \glsxtrshort{jcg}'' configuration, 56.25~\% of the crashes flagged as vulnerabilities correspond to true positives, whereas in the ``Without \glsxtrshort{jcg}'' case precision drops to 35.71~\%.  
+This indicates that the \gls{jcg} not only increases the fraction of detected vulnerabilities, but also makes positive predictions more trustworthy.  
 
-Precision behaves differently.  
-When operating without the call graph, the model becomes more conservative, achieving 35.71~\% precision compared to 53.33~\% in the “With CG” setting.  
-The absence of Java context makes the model less willing to flag crashes as vulnerable, reducing false positives but also limiting its capacity to identify real issues.
+Recall is consistently high in both settings, but still shows a noticeable gap.  
+With \glsxtrshort{jcg}, the system correctly recovers 81.82~\% of all true vulnerabilities, while without it recall drops to 71.43~\%.  
+This confirms that providing the \gls{llm} with an explicit \gls{jcg} avoid missing dangerous cases.  
 
-Overall, the F1–score highlights this trade-off.  
-With the call graph the system reaches 64.00~\%, whereas without it the score decreases to 47.62~\%, reflecting the reduced ability to balance precision and recall.  
-The combined F1-score across all crashes is 56.52~\%, indicating that the current implementation prioritises the detection of potential vulnerabilities (high recall) over precision.
-
-In summary, call–graph information significantly improves both the completeness and consistency of the triage process. 
-Removing this context leads to a more conservative but less comprehensive analysis, ultimately reducing reliability.
-
-
-%Overall, these results show that the current implementation is conservative in its judgement, prioritising the detection of potential vulnerabilities over strict precision.  
-%While this behaviour is desirable in contexts where missing a vulnerability is more costly than over-reporting, it also highlights the need for improvements aimed at reducing false positives, such as integrating specialised models, adopting RAG-based grounding, or leveraging persistent agents as discussed in Chapter~\ref{chp:futureWork}.
+The F1-score, which combines precision and recall into a single metric, highlights the overall impact of the call graph.  
+With \glsxtrshort{jcg}, the system reaches 66.67~\%, whereas without it the score falls to 47.62~\%.  
+The combined F1-score across all crashes is 58.33~\%, indicating that, on average, the current implementation performs substantially better when \gls{jcg} information is available, and becomes less balanced and less reliable when this context is removed.

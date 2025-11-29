@@ -5,66 +5,39 @@
 
 The implemented pipeline demonstrates acceptable and promising operational performance.  
 
-\textit{Single-crash} analysis by the \gls{llm} requires on average less than a minute, which makes the approach scalable for datasets of moderate size.  
-However, the total execution time per application depends heavily on fuzzer-generated crash count, the complexity of native stack traces, and the number of native libraries involved.  
-In applications with many or large native libraries, the overhead caused by importing and decompiling binaries can substantially increase the total runtime, this extra cost is due to the reverse-engineering tools, not the analysis itself.
+
+\textit{Single-crash} analysis by the \gls{llm} requires on average less than a minute, which makes the approach scalable and significantly accelerates the classification process.
+However, the total execution time per application depends heavily on fuzzing procedure, the crash count of method, the complexity of native stack traces, and the number of native libraries involved.  
+In applications with many or large native libraries, the overhead caused by importing and decompiling binaries can substantially increase the total runtime, this overhead originates from the reverse-engineering tools rather than from the analysis performed by the model.
 
 \section{Effect of \glsxtrlong{jcg}}
 
-The comparison between analyses performed with or without the \gls{jcg} yields a clear trade-off:
+As seen in Chapter~\ref{chp:result}, the comparison between analyses performed with or without the \gls{jcg} yields a clear trade-off:
+
 \begin{myitemize}
     \item When the \glsxtrlong{jcg} is available (“With \glsxtrshort{jcg}”), the model can leverage both native and Java-level context, producing more coherent and realistic vulnerability assessments. Under this configuration, the system achieves higher recall and maintains relatively few false negatives.
-    \item Without the \glsxtrlong{jcg} (“Without \glsxtrshort{jcg}”), the lack of Java-side context leads the model to over-approximate risks. The model tends to treat all inputs reaching native code as potentially attacker-controlled, resulting in a significantly higher number of false positives.
+    \item Without the \glsxtrlong{jcg} (“Without \glsxtrshort{jcg}”), the lack of Java-side context leads the model to over-approximate risks. Without knowing the origin or constraints of the data, the system tends to treat values as attacker-controlled, even when in reality they may originate from fixed Java-side logic and be impossible for an attacker to influence.
 \end{myitemize}
 
-This confirms the hypothesis that integrating cross-layer context (Java + native) is essential to reduce spurious vulnerability reports while preserving the capacity to detect real issues.
 
 \section{Reliability}
 
-A major strength of the pipeline is the low number of False Negatives: most actual vulnerabilities (i.e., real exploitable crashes) are correctly flagged by the system. In security auditing, such conservativeness—preferring to err on the side of caution—is often desirable.
+The pipeline exhibits a low number of False Negatives, indicating that genuine vulnerabilities are rarely overlooked. This behaviour is partly influenced by the \gls{llm}'s tendency to classify ambiguous memory-related faults (e.g., buffer errors, JNI misuse, invalid native calls) as potentially dangerous. Prior studies highlight similar patterns: general-purpose models often over-predict positives, hallucinate tool behaviour, or misinterpret control-flow semantics~\cite{10456393,ullah2024llmsreliablyidentifyreason}. %Such limitations make them conservative but also fragile, reinforcing the need to complement their output with more deterministic analyses rather than relying on them as stand-alone security oracles.
 
-This behaviour can be explained by the LLM’s tendency to classify ambiguous cases as vulnerabilities, particularly those involving memory-related failures such as buffer errors, JNI misuse, or improper native calls. This pattern is consistent with what has been observed in prior research on LLM-based vulnerability detection, including the work of Akuthota et al.~\cite{10456393}, which reports a marked inclination of GPT-based models to over-predict positives and thus generate a substantial number of false positives.
 
-While this over-cautious behaviour increases the false-positive rate, it ensures that most true issues are reliably surfaced and can subsequently be triaged manually or processed by more precise, specialized analysis tools.
+%There are several factors limit the reliability and generalisability of the results.
 
-\begin{comment}
-    
-A major strength of the pipeline is the low number of False Negatives: most actual vulnerabilities (i.e.\ real exploitable crashes) are correctly flagged by the system.  
-In security auditing, such conservativeness, preferring to err on the side of caution, is often desirable.  
-The behaviour may be explained by the \gls{llm}’s bias toward flagging memory-related crashes (buffer errors, JNI misuse, improper native calls) as vulnerabilities whenever evidence is ambiguous — a pattern already documented in literature as a common issue of LLM-based vulnerability detection~\cite{10456393}.
-Therefore, while this leads to many false positives, the system reliably surfaces most true issues, which can then be manually triaged or triaged by more precise tools.
-\end{comment}
+\section{Limitations}
 
-\section{Threats to Validity}
+The evaluation performed in this thesis is subject to several limitations that affect the results.
 
-Several factors may compromise the validity of the results:
+The quality of the classification strongly depends entirely on the crash traces produced by POIROT. When stack trace contain missing or unresolved entries (marked as ``\texttt{??}''), the model lacks essential execution context and tends to assume a worst-case scenario, contributing to the high false-positive rate observed in the evaluation.
 
-- \textbf{Dependence on crash trace quality.} The classification is highly dependent on the completeness and correctness of the stack traces generated by the fuzzer. In many cases, the trace contains ambiguous frames (e.g.\ marked as “\texttt{??}”) or omits intermediate functions, reducing the context available for analysis. This frequently causes uncertainty in classification and likely contributes to the high false-positive rate.
+The dataset, though representative of diverse applications, cannot fully capture the variability of real-world Android ecosystems. %In practice, the Android landscape includes a wide range of device vendors, customised firmware, architecture-specific native libraries, and highly heterogeneous JNI integration patterns. Such diversity may expose corner cases or interaction behaviours that are not reflected in the evaluated sample, limiting the extent to which the observed results can be generalised.
 
-- \textbf{Intrinsic limitations of LLM reasoning.} Multiple recent studies highlight that LLMs may not reliably reason about code in security-sensitive contexts. They can hallucinate tool calls, misunderstand code semantics, or fail when minor modifications (function renaming, formatting changes) are applied — leading to inconsistent or incorrect vulnerability assessments. :contentReference[oaicite:2]{index=2}  
-  This unpredictability and fragility limit the trustworthiness of purely automated triage, especially in complex or obfuscated binaries.
 
-- \textbf{Dataset and sample bias.} The set of applications and crashes used in this evaluation may not cover all relevant real-world scenarios. For example, APKs with uncommon JNI patterns or exotic library structures might behave differently, thus the results may not generalize.
+%Additionally, the inherent limitations of current LLMs in code reasoning introduce further uncertainty. Recent studies show that these models may hallucinate tool behaviour, misinterpret control-flow semantics, or become unstable under minor program transformations~\cite{ullah2024llmsreliablyidentifyreason}. Such fragility makes them unsuitable as stand-alone security oracles and suggests that their output should be complemented with deterministic analyses.
 
-- \textbf{Lack of ground truth completeness.} The classification labels (vulnerable / non-vulnerable) hinge on manual or heuristic validation of crash exploitability, which may miss subtle vulnerabilities or mislabel benign crashes — introducing noise in the evaluation metrics.
+%Another limiting factor concerns the ground truth used for evaluation. Labels indicating whether a crash is truly exploitable rely on heuristic validation and may themselves contain inaccuracies. Moreover, the dataset—though representative of diverse applications—cannot fully capture the variability of real-world Android ecosystems.
 
-\section{Implications and Future Directions}
-
-The results suggest that LLM-based triage, when enriched with binary and bytecode context via MCP tools, can serve as an effective \emph{preliminary filter} in a larger vulnerability analysis pipeline:  
-it reduces analysts’ workload by quickly flagging likely vulnerabilities, while deferring manual verification to a later stage.
-
-Nevertheless, improving precision — reducing false positives — remains essential. Possible future improvements include:
-
-\begin{itemize}
-  \item improving the quality and completeness of fuzzer-generated stack traces;  
-  \item integrating additional static or dynamic analyses (e.g.\ symbolic execution, taint tracking) to corroborate or refute the LLM’s conclusions;  
-  \item augmenting context supplied to the model (e.g.\ via RAG, code summary, better call-graph reconstruction) to reduce uncertainty;  
-  \item exploring persistent agent architectures or repeated analysis with multiple LLMs to increase robustness and consensus.  
-\end{itemize}
-
-\section{Summary}
-
-In conclusion, the proposed LLM + MCP pipeline achieves a favorable balance between automation, recall, and analysis speed.  
-It excels at surfacing real vulnerabilities (low false negatives) while maintaining relatively low computational cost per crash.  
-However, the significant false-positive rate, combined with dependencies on evidence quality and LLM limitations, indicates that such a system is best suited as an initial triage filter — not a final decision tool.  
-Future work should focus on improving precision, robustness, and coverage.
+%In summary, while the system reliably surfaces true vulnerabilities, its precision is constrained by fuzzer trace quality, LLM reasoning limitations, and incomplete ground truth, all of which must be considered when interpreting the results.
