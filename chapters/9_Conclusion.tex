@@ -1,0 +1,39 @@
+\chapter{Conclusions}
+\label{chp:conclusions}
+
+
+
+This thesis presented an autonomous \gls{llm} triage pipeline that combines with the \glsxtrlong{mcp} (\glsxtrshort{mcp}) to analyse \emph{native crashes} in Android applications.  
+The goal was to support vulnerability assessment in scenarios where manual crash inspection is time-consuming and labour-intensive, and where applications rely on native components accessed through the \glsxtrlong{jni}.
+
+
+The proposed system integrates the reverse-engineering tools, \emph{Jadx} for bytecode analysis and \emph{Ghidra} for native disassembly, into the \gls{llm}’s reasoning loop, enabling context-aware classification of \emph{POIROT}-generated crashes.  
+The evaluation demonstrates that the pipeline reliably identifies real vulnerabilities, achieving low false-negative rates and providing structured explanations, confidence scores, and evidence traces.  
+The TP-LINK tpCamera case study further shows that the system can approximate expert-level analysis: the \gls{llm} classification aligns with the ground-truth vulnerability reported in PIROT (CVE-2023-30273), correctly identifying the unsafe lifecycle of the encoder context and the conditions leading to a use-after-free.
+
+At the same time, the results highlight several limitations.  
+Precision remains modest, due to incomplete crash traces and the conservative behaviour of general-purpose \glspl{llm}, which tend to over-approximate risk when information is missing.  
+These results indicate that such a system should not replace traditional analyses, but rather serve as an integrative tool that accelerates classification and provides a structured starting point for further and more precise investigation.  
+
+\smallskip
+
+\textcolor{red}{Da qua non sono più convinto, questo ripete quanto prima circa}
+The work demonstrates the viability of using \glspl{llm} to enhance automated vulnerability triage, offering an approach that scales to applications with native components and reduces the manual effort required for initial crash assessment.
+
+
+%Despite these limitations, 
+%The work demonstrates the viability of using \glspl{llm} to enhance automated vulnerability triage.  
+%The approach scales to applications with numerous native libraries. %, reduces the manual load on analysts, and provides reproducible reasoning grounded in explicit code evidence.  
+%This opens opportunities for integrating \gls{llm}-assisted triage into broader fuzzing pipelines or continuous security testing frameworks.
+\textcolor{red}{non so se ha senso riparlare di future work qui}\\
+Future work should focus on improving precision through richer static and dynamic context, extending Java–to–native call-graph reconstruction. Integrating automated exploitability assessment and symbolic reasoning layers could also further strengthen the system’s reliability.  
+
+\textcolor{red}{di nuovo un recap}\\
+In conclusion, this thesis shows that \gls{llm}-based crash triage, when combined with reverse-engineering tools through \gls{mcp}, offers a promising direction for scalable vulnerability analysis.  
+It enhances the efficiency and consistency of the triage process and provides a practical foundation for more advanced, context-aware security automation.
+
+\bigskip
+
+\textcolor{blue}{alternativa a gli ultimi 3}\\
+Overall, the findings demonstrate that \gls{llm}-based crash triage, when combined with reverse-engineering tools through \gls{mcp}, offers a promising direction for scalable vulnerability analysis.  
+It enhances the efficiency and consistency of the triage process and provides a practical foundation for more advanced, context-aware security automation.

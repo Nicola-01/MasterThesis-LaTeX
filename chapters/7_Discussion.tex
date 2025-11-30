@@ -49,21 +49,22 @@ The dataset, though representative of diverse applications, cannot fully capture
 To evaluate the quality of the \gls{llm}-based triage, this section compares the model’s classification of a real vulnerability in the \texttt{tpCamera} application with the ground truth reported in the POIROT paper~\cite{poirot-usenix25}.  
 The vulnerability, later assigned CVE-2023-30273, concerns a use-after-free condition in the native MP4 encoding library.
 
-\subsection{Ground-Truth Summary}
-Section~5.6 of the POIROT paper describes a reproducible use-after-free vulnerability in the \texttt{libTPMp4Encoder.so} library.  
-The flaw arises when the application invokes the MP4 encoding pipeline with malformed JPEG or H.264 data:
 
-\begin{itemize}
+\subsection{Ground-Truth Summary}
+
+Section~5.6 of the POIROT paper~\cite{poirot-usenix25} describes a reproducible use-after-free vulnerability in the \texttt{libTPMp4Encoder.so} library.  
+The flaw is triggered when the application invokes the MP4 encoding pipeline with malformed JPEG or H.264 data:
+
+\begin{enumerate}
     \item The JNI function \texttt{packVideo} receives attacker-controlled frame data and a size parameter.
-    \item The native function \texttt{mp4\_write\_one\_h264} tears down the encoder context on malformed input: it closes the file, frees multiple internal buffers, and finally frees the global structure \texttt{iniPacker\_global} itself.
+    \item The native function \texttt{mp4\_write\_one\_h264} tears down the encoder context on malformed input: it closes the file, frees multiple internal buffers, and finally frees the global structure \texttt{iniPacker\_global}.
     \item A second invocation of \texttt{packVideo} reuses the same freed encoder context, triggering a \emph{use-after-free} where the freed structure is overwritten by attacker-controlled data.
     \item The overwritten structure corrupts the file pointer passed to \texttt{fclose()}, enabling arbitrary code execution under certain conditions.
-\end{itemize}
+\end{enumerate}
 
-The exploit is reproducible with a precise call sequence (\texttt{iniPacker} → \texttt{packVideo} → second \texttt{packVideo}) and was validated both locally and through a MITM attack against the tpCamera app.
+The vulnerability has practical security impact: an attacker on the same network, or one who has compromised a TP-Link camera, can exploit the issue as soon as the user presses the “record” button in the tpCamera app. % and was validated both locally and through a MITM attack against the tpCamera application.
 
-\subsection{LLM Classification Summary}
-\ref{out}
+\subsection{\glsxtrshort{llm} Classification Summary}
 
 The \gls{llm}-based triage correctly identifies the crash in \texttt{tpCamera} as a genuine vulnerability, assigning a high severity level and a confidence score of 0.85.  
 The model attributes the crash to a memory-safety error in the native MP4 encoding pipeline, centred around the logic implemented in the \texttt{mp4\_write\_one\_h264} routine in \texttt{libTPMp4Encoder.so}.
@@ -82,15 +83,16 @@ The full classification output for this application is provided in Appendix~\ref
     \item \textbf{Potential heap corruption and double free}: Repeated calls on a freed context can corrupt heap metadata, consistent with the crash \texttt{scudo::reportInvalidChunkState}.
 \end{itemize}
 
+
 The model concludes that the vulnerability likely enables heap corruption or a double-free/use-after-free condition, mapping it to CWE-787 (Out-of-bounds Write), CWE-415 (Double Free), and CWE-416 (Use After Free).  
 It also identifies a plausible exploitation vector: \texttt{"trigger\_method"}: ``Malformed H.264 frame buffer passed via MP4Encoder.packVideo with inconsistent size parameter''.
 
 \subsection{Comparison with Ground Truth}
 
 The \gls{llm}-generated analysis aligns closely with the ground-truth description reported in the POIROT paper~\cite{poirot-usenix25}.  
-Both sources identify the vulnerability as a use-after-free condition arising from repeated invocations of \texttt{packVideo} on a freed encoder context.
+Both sources identify the vulnerability as a use-after-free condition arising from repeated invocations of \texttt{packVideo} on a freed encoder context, although the \gls{llm} expresses the use-after-free through its \gls{cwe} assignment rather than presenting it as the primary causal mechanism.
 
-\paragraph{\glsxtrlong{llm} classification compared with PIROT}
+%\paragraph{\glsxtrlong{llm} classification compared with PIROT}
 
 \begin{itemize}
     \item \textbf{Root cause agreement}: The analysis matches the PIROT description, recognising that the encoder context (\texttt{iniPacker\_global}) is freed on malformed input and later reused, enabling a use-after-free.
@@ -106,8 +108,5 @@ Overall, the model captures the key structural and behavioural elements of the v
 This comparison shows that the \gls{llm}-based triage is capable of reconstructing the essential characteristics of a complex native vulnerability using only stack-trace evidence, decompiled code, and contextual information accessed through \gls{mcp} tools.  
 The model correctly identifies the use-after-free pattern, the conditions that lead to encoder-state corruption, and the attacker-controlled inputs required to reach the vulnerable code paths.
 
-The analysis produced by the model is not only consistent with the POIROT ground truth, but also captures several realistic exploitation vectors.  
-Its focus on the unvalidated size parameter, while not explicitly central in the POIROT paper, illustrates the model's ability to reason about alternative failure modes that could plausibly contribute to heap corruption in similar contexts.
-
-The case study demonstrates that the proposed pipeline can approximate expert-level reasoning and align closely with real-world vulnerability reports, validating its effectiveness as an initial triage mechanism.
+The analysis produced by the \gls{llm} is not only consistent with the POIROT ground truth, but also captures several realistic exploitation vectors. Demonstrates that the proposed pipeline can approximate expert-level reasoning and align closely with real-world vulnerability reports, validating its effectiveness as an initial triage mechanism.
 
