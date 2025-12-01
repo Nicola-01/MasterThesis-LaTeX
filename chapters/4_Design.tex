@@ -9,23 +9,25 @@ This chapter presents the conceptual design of the automated crash–triage syst
 \section{Data Models}
 
 A central element in the design of the crash–triage system is the definition of a set of structured data models that organise all information exchanged between components. 
-Since the \gls{llm}-based analysis relies on precise, machine-readable context, every stage of the workflow—from parsing POIROT outputs, to extracting application metadata, to producing the final vulnerability assessment—depends on well-defined representations.
+Since the \gls{llm}-based analysis relies on precise, machine-readable context, every stage of the workflow, from parsing POIROT outputs, to extracting application metadata, to producing the final vulnerability assessment, depends on well-defined representations.
 These models constrain how information is encoded, ensure consistency across analyses, and guide the \gls{llm} by enforcing a predictable input and output format.
 
-In this project, all relevant information is captured through strongly typed objects such as \texttt{CrashSummary}, \texttt{AppMetadata}, and \texttt{VulnResult}. Their standardised structure guarantees that the \texttt{CrashSummary} provided to the \gls{llm} have always a consistent structure, divided into clearly defined fields that are explicitly explained in the system prompt and easily interpretable by the model. Likewise, the \texttt{AppMetadata} and \texttt{VulnResult} models allow the system to request a precise and schema-constrained output from the \gls{llm}, which must adhere to the predefined structure.
+In this thesis project, all relevant information is captured through strongly typed objects such as \texttt{CrashSummary}, \texttt{AppMetadata}, and \texttt{VulnResult}. Their standardised structure guarantees that the \texttt{CrashSummary} provided to the \gls{llm} have always a consistent structure, divided into clearly defined fields that are explicitly explained in the system prompt and easily interpretable by the model. Likewise, the \texttt{AppMetadata} and \texttt{VulnResult} models allow the system to request a precise and schema-constrained output from the \gls{llm}, which must adhere to the predefined structure.
 
 Instead of asking the model directly whether the app is vulnerable and why, the system instructs the \gls{llm} to populate a fixed JSON template containing all relevant fields, with strict type and content definitions, ensuring that output is both machine- and human-readable. This approach may improve \gls{llm} robustness and reduce variability in classification tasks, because schema-based prompting helps the model focus on the attributes relevant for the decision while avoiding drifting into irrelevant details.
 
 
 Moreover, enforcing a fixed structure simplifies downstream processing: outputs can be exported as well-formed \texttt{JSON} files and automatically queried or aggregated across multiple applications. For example, after a full triage run, external utilities can group results by vulnerability verdict, severity level, or associated \gls{cwe} identifiers, inspect all low-confidence cases, or generate visual summaries such as the ratio of vulnerable versus benign crashes across Android versions. 
 
+\smallskip
+
 The crash report may also include a possible \gls{poc}, meaning that structured outputs can additionally support automated testing: external tools can more easily extract the commands suggested by the \gls{llm} and attempt to execute them for exploit verification. This capability is not guaranteed to work reliably in all cases, but a standardised output format makes such integration technically feasible and simplifies the development of external validation utilities.
 
 
-The structured design therefore relies on a set of core data models, described below.
+The structured design therefore relies on a set of core data models:
 
 
-\begin{itemize}
+\begin{myitemize}
     \item \textbf{CrashSummary} Represents a single crash extracted from the analysis report.\\  
     It encapsulates key fields such as the native stack frames, JNI bridge method, a reconstructed \gls{jcg}, the set of native libraries involved in the stack trace, among other fields..  
     %This model provides to the agent all the information needed for classification.
@@ -44,9 +46,9 @@ The structured design therefore relies on a set of core data models, described b
     Describes the exploitability of a suspected vulnerability.\\
     It contains key fields such as the exploitability rating (unknown / theoretical / practical), the required environmental prerequisites, and Proof of Concept commands, alongside additional optional elements.
     %This model enables the \gls{llm} to assess not only the presence of a vulnerability but also its operational impact.
-\end{itemize}
+\end{myitemize}
 
-\subsubsection{Additional Structures}
+Additional Structures are:
 
 \textbf{EvidenceItem} stores an piece of evidence used by the \gls{llm} to justify its reasoning, such as a function name, memory address, short decompiled snippet, and an associated explanatory note.  
 
@@ -75,7 +77,7 @@ The prompt employs \emph{meta prompting}\cite{zhang2025metapromptingaisystems}: 
 This provides the model with a stable cognitive frame and constrains its behaviour.
 
 In addition, the prompt enforces an implicit form of \emph{Chain-of-Thought} reasoning\cite{wei2023chainofthoughtpromptingelicitsreasoning}.  
-Although the internal chain of thought is not exposed in the output, the model is instructed to follow a multi-step analytical path—starting from the crashing frame, performing backward reasoning, checking reachability, and validating assumptions—before emitting the final classification.
+Although the internal chain of thought is not exposed in the output, the model multi-step analytical path—starting from the crashing frame, performing backward reasoning, checking reachability, and validating assumptions, before emitting the final classification. 
 
 \subsection{Structure of the Prompt}
 
@@ -94,16 +96,18 @@ The model is instructed to integrate these artefacts into a coherent execution p
 In particular, it must reconstruct the control flow starting from the point of failure and reason backwards to identify the root cause, assessing whether the crash is plausibly reachable and whether user-controlled data may influence the faulting operation.
 
 \paragraph{3. Tool-use protocol.}
-A dedicated section of the prompt defines how the agent must interact with external tools exposed through the \gls{mcp}.  
-The model is told when tool calls are appropriate, which information each tool can provide, and how retrieved evidence should influence the ongoing analysis.  
-This ensures that tool invocations are purposeful and integrated into the reasoning loop.
+A dedicated section of the prompt specifies how the agent should interact with external tools exposed through the \gls{mcp}.  
+It explains some tool calls, what information can provide, and how retrieved evidence should influence the ongoing analysis.  
+%Ensuring that tool invocations are well integrated into the model’s reasoning loop.
 
 \paragraph{4. Structured output requirements.}
 The final part of the prompt imposes strict output constraints.  
 The model must produce a JSON object consistent with a predefined schema, filling fields such as the vulnerability verdict, confidence score, severity, CWE identifiers, and other.
 Each field is accompanied by explicit instructions describing what constitutes a valid value and how the agent should justify its decisions.
 
-Overall, this structured prompt acts as a complete analytical workflow: it defines how the \gls{llm} interprets inputs, how it retrieves additional evidence, how it reasons about the execution path, and how it produces a verifiable and reproducible vulnerability assessment.
+\bigskip
+
+Overall, this structured prompt acts as a complete analytical workflow: it defines how the \gls{llm} interprets inputs, how it retrieves additional evidence, how it reasons about the execution path, and how it produces a vulnerability assessment.
 
 
 
@@ -125,7 +129,7 @@ The remainder of this chapter expands each of these components in detail.
 
 The triage pipeline is designed as a structured, evidence-driven reasoning process. Its objective is to enrich the raw crash artefacts produced by POIROT with code-level context, enabling the \gls{llm} to formulate grounded judgements.
 
-Figure~\ref{fig:pipeline_overview} provides an overview of the full workflow, which integrates: (i) POIROT’s fuzzing output, (ii) static-analysis backends exposed via \glspl{mcp}, and (iii) the \gls{llm} configured with a strict meta-prompt and output schema.
+Figure~\ref{fig:pipeline_overview} provides an overview of the full workflow, which integrates: (i) POIROT’s fuzzing output, (ii) static-analysis backends exposed via \glspl{mcp}, and (iii) the \gls{llm} configured with a strict prompt and output schema.
 
 \begin{figure}[!ht]
     \centering
@@ -144,11 +148,11 @@ These raw crash reports contain the native stack traces, from which the process 
 For each crash, the system constructs a corresponding \texttt{CrashSummary} object, which combines the information extracted from the crash report with additional data required for the triage.
 
 \begin{itemize}
-    \item \textbf{Native Stack Trace}: the raw output produced by POIROT, consisting of the sequence of native frames leading to the crash.
-    \item \textbf{JNI Bridge Method}: identified by decoding the \gls{jni} signature extracted from the crash, allowing the system to locate the corresponding Java declaration within the \gls{apk} (Listing~\ref{lst:JNI}).
-    \item \textbf{\glsxtrlong{jcg}}: obtained by filtering the FlowDroid-generated \gls{jcg}\footnote{\url{https://github.com/secure-software-engineering/FlowDroid}} to retain only the paths relevant to the crash.  
+    \item \textbf{Native Stack Trace}: The raw output produced by POIROT, consisting of the sequence of native frames leading to the crash.
+    \item \textbf{JNI Bridge Method}: Identified by decoding the \gls{jni} signature extracted from the crash, allowing the system to locate the corresponding Java declaration within the \gls{apk} (Listing~\ref{lst:JNI}).
+    \item \textbf{\glsxtrlong{jcg}}: Obtained by filtering the FlowDroid-generated \gls{jcg}\footnote{\url{https://github.com/secure-software-engineering/FlowDroid}} to retain only the paths relevant to the crash.  
     This helps the \gls{llm} analyse the Java-side control flow more easily and increases the coverage of the application during triage.
-    \item \textbf{Libraries and methods map}: using the stack-trace information, the tool identifies which native library contains each frame involved in the crash (including the JNI bridge). This provides the \gls{llm} with a compact map of all methods in the stack trace and the \texttt{.so} file in which each one resides.
+    \item \textbf{Libraries and methods map}: Using the stack-trace information, the tool identifies which native library contains each frame involved in the crash (including the JNI bridge). This provides the \gls{llm} with a compact map of all methods in the stack trace and the \texttt{.so} file in which each one resides.
 \end{itemize}
 
 
@@ -175,16 +179,15 @@ It also informs the agent of the available \glspl{mcp} and clarifies when tool c
 \subsection{Crash Prompting}
 
 For each crash, a dedicated \emph{user prompt} provides the corresponding \texttt{CrashSummary}, which contains all the information required by the \gls{llm} to perform the analysis.  
-In addition to the native stack trace, the \texttt{CrashSummary} includes the filtered \gls{jcg} leading to the JNI entry point, as well as the mapping of libraries and methods involved in the fault.  
+The \texttt{CrashSummary} contains the native stack trace, the filtered \gls{jcg} leading to the JNI entry point, and the mapping of libraries and methods involved in the fault.
 This ensures that the model receives a concise yet complete representation of the execution path, covering both the Java and native layers relevant to the crash.
 
-In case of multiple crash of the same method, the agent will remain the same, is only provide with the new crash to classified as a user prompt, but the agent it's not reseted, so it already known some apk/librari stracture
-
+In case of multiple crash of the same method, the agent will remain the same, is only provide with the new crash to classified as a user prompt, but the agent it's not reseted, so it already known some apk/librari stracture. However, a new agent is created whenever the analysis of a new crash begins.
 
 \subsection{Tool-Mediated Reasoning}
 
 During the analysis, the model is free to decide which tool to invoke and when to invoke it, with the objective of retrieving the evidence required for the classification.  
-Although the system prompt provides a suggested pipeline for collecting information, this sequence is not enforced; instead, it serves as a guideline.  
+The system prompt provides a pipeline for collecting information, that serves as a guideline.  
 The agent can adaptively select the most appropriate \gls{mcp} call based on the evidence needed to advance its reasoning, allowing the triage process to remain flexible while still grounded in verifiable tool-assisted retrieval.
 
 
@@ -199,7 +202,7 @@ The \texttt{VulnResult} begins with the core elements of the triage:
 \begin{myitemize}
     \item \textbf{chain\_of\_thought}: an internal step-by-step reasoning trace produced before the final verdict.
     \item \textbf{is\_vulnerable}: the final verdict indicating whether the crash corresponds to a likely vulnerability.
-    \item \textbf{confidence}: a calibrated score in the range $[0,1]$ reflecting how strongly the evidence supports the classification.
+    \item \textbf{confidence}: a score in the range $[0,1]$ reflecting how strongly the evidence supports the classification.
     \item \textbf{reasons}: a list of short, concrete justifications summarising the logic behind the verdict.
     \item \textbf{cwe\_ids}: identifiers of relevant \glsxtrlong{cwe}, enabling alignment with standard vulnerability taxonomies.
     \item \textbf{severity}: an estimated impact level (low, medium, high, or critical) based on the nature of the fault and the contextual evidence.
@@ -229,12 +232,12 @@ Its structure includes:
     \item \textbf{poc\_files}: references to crafted payload files used during exploitation.
 \end{myitemize}
 
-\paragraph{Purpose of Chain-of-Thought and Chain-of-Process.}
-Two additional components—\textbf{Chain-of-Thought (CoT)} and the \textbf{Exploit / Chain-of-Process (CoP)} block—are included to guide the \gls{llm} toward grounded, non-speculative reasoning.
+%\paragraph{Purpose of Chain-of-Thought and Chain-of-Process.}
+The additional components—\textbf{Chain-of-Thought (CoT)} and the \textbf{Exploit / Chain-of-Process (CoP)} block, were included to guide the \gls{llm} toward grounded, non-speculative reasoning.
 
 The \textbf{CoT} field stores the model's internal reasoning steps used \emph{before} classification.  
-Its purpose is not to be shown to a human evaluator but to keep the model focused on systematic, step-by-step analysis rather than relying on pattern-matching shortcuts.  
-By prompting the model to reason explicitly, the system reduces the likelihood of superficial or hallucinated assessments and encourages the analysis of concrete evidence retrieved via \gls{mcp} tools.  
+Its purpose is not to be shown to a human evaluator, but to keep the model focused on systematic, step-by-step analysis rather than relying on pattern-matching shortcuts.  
+By prompting the model to reason explicitly, the system reduces the likelihood of superficial or hallucinated assessments and encourages the analysis of concrete evidence retrieved via \gls{mcp} tools.  \textcolor{red}{non so se sia veramente così e non ho dei dati, ma mi è apparso così da quando l'ho aggiunta}
 Empirically, the inclusion of \gls{cot} led to more consistent and accurate classifications, reducing false positives.
 
 
@@ -294,7 +297,7 @@ Finally, the analysis run is encapsulated in an \texttt{AnalysisBlock}, which ag
 
 \section{Output Structure}
 
-The \texttt{AnalysisBlock} is serialised into a well-formed \texttt{JSON} file, allowing the entire workflow—from crash extraction to final assessment—to be exported, archived, and automatically processed by external systems.  
+The \texttt{AnalysisBlock} is serialised into a well-formed \texttt{JSON} file, allowing the entire workflow, from crash extraction to final assessment, to be exported, archived, and automatically processed by external systems.  
 This enables downstream tasks such as aggregating results across applications, filtering by severity or \gls{cwe} category, computing statistics, or integrating the outputs into broader testing and validation pipelines.
 \medskip
 

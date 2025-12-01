@@ -5,7 +5,7 @@
 % comments, and \textcolor{red}{...} sections as required.
 % The content now aligns with the conceptual design from Chapter 5.
 
-The implementation realises the design described in Chapter~\ref{chp:design} through a Python-based orchestration layer built around three core elements: (i) structured data models, (ii) explicit adapters for tool interaction via the \gls{mcp}, and (iii) specialised prompting templates to ensure reproducible and deterministic behaviour across crash analyses. Also describes the concrete system architecture, library dependencies, internal module structure, and the integration workflow between the \gls{llm}, Jadx/Ghidra \glspl{mcp}, and POIROT’s crash artefacts.
+The implementation realises the design described in Chapter~\ref{chp:design} through a Python-based orchestration layer built around three core elements: (i) structured data models, (ii) helper functions for integrate the \gls{mcp}, and (iii) specialised prompting templates to ensure reproducible and deterministic behaviour across crash analyses. Also describes the concrete system architecture, library dependencies, internal module structure, and the integration workflow between the \gls{llm}, Jadx/Ghidra \glspl{mcp}, and POIROT’s crash artefacts.
 % Where relevant, we also document operational constraints, practical issues encountered during development, and the rationale behind critical implementation decisions.
 
 \section{Libraries and Dependencies}
@@ -19,7 +19,7 @@ Main libraries and tools adopted in this thesis:
     This guarantees deterministic parsing of the LLM outputs, ensures structural validation of all intermediate artefacts, and allows lossless serialisation and deserialisation into JSON.
 
     \item \textbf{pydantic\_ai}  
-    Provides the agent abstraction, including the \gls{mcp}
+    Provides the agent abstraction, the \gls{mcp}
     client and the \texttt{MCPServerStdio} transport, enabling the program
     to communicate with Jadx and Ghidra \glspl{mcp} over standard I/O streams.
 
@@ -67,7 +67,7 @@ The Ghidra and Jadx helper functions manage the corresponding GUI sessions and i
 \subsection*{\gls{mcp} Helper Functions and Data Structures}
 
 The \texttt{MCPs/} directory contains both the core data-structure definitions used throughout the triage pipeline and a set of helper functions that support \gls{mcp}-based tool interaction.  
-The data models defined in this module—such as \texttt{CrashSummary}, \texttt{AppMetadata}, \texttt{VulnResult}, \texttt{Exploit}, and \texttt{AnalysisBlock}—are those described in Chapter~\ref{chp:design}.
+The data models defined in this module, such as \texttt{CrashSummary}, \texttt{AppMetadata}, \texttt{VulnResult}, \texttt{Exploit}, and \texttt{AnalysisBlock}, are those described in Chapter~\ref{chp:design}.
 
 The directory also includes helper utilities that streamline communication with the Jadx and Ghidra \glspl{mcp}.  
 These modules handle the additional initialisation steps required to make the \glspl{mcp} available to the \gls{llm}, ensuring that each backend is correctly configured before the analysis begins.
@@ -86,12 +86,12 @@ Each prompt serves a distinct function and is tailored to the type of informatio
     Encodes the complete vulnerability-triage logic.  
     It specifies what constitutes a vulnerability, the backward data-flow reasoning process, the conditions for exploitability, and the full JSON schema required for the output.  \\
     A variant of this prompt is used when the \gls{jcg} is unavailable; in this case, the model is not required to reason about the Java-side control flow.  
-    Using the standard prompt in such situations proved problematic, as models without Java context tended to treat all inputs as attacker-controlled, leading to misclassifications.
+    %Using the standard prompt in such situations proved problematic, as models without Java context tended to treat all inputs as attacker-controlled, leading to misclassifications.
 
     \item \texttt{Shimming\_prompts.py}  
     Defines the system prompts used when interacting with models that lack native \gls{mcp} support.  
     The template includes placeholders into which the required tool descriptions and system instructions are dynamically injected.  
-    It also enforces the appropriate output schema—either metadata extraction or vulnerability assessment—ensuring consistent and predictable behaviour across different backends.
+    It also enforces the appropriate output schema—either metadata extraction or vulnerability assessment, ensuring consistent and predictable behaviour across different backends.
     
 \end{itemize}
 
@@ -102,7 +102,8 @@ Each prompt serves a distinct function and is tailored to the type of informatio
 
 \section{\glsxtrshort{llm} and \glsxtrshort{mcp} Integration}
 
-The system is \gls{llm}-agnostic, it is not tied to a single model but supports multiple options. This flexibility allows selection of the provider that best fits the task, easy switching between models. Ensuring that the same triage logic can operate with different \gls{llm} vendors or even fully local models. Currently, the program supports \texttt{OpenAI}, \texttt{Gemini} and local \texttt{Ollama} models, and can be extended to include additional vendors.
+
+The system is \gls{llm}-agnostic: it is not tied to a single model and supports multiple alternatives. This flexibility allows users to select the model that best fits the task, without depending on any specific provider. Ensuring that the same triage logic can operate with different \gls{llm} vendors or even fully local models. Currently, the program supports \texttt{OpenAI}, \texttt{Gemini} (and Gemini-cli), and local \texttt{Ollama} models, and can be extended to include additional vendors.
 
 The integration between the \gls{llm} and the reverse-engineering backends is realised via the \texttt{pydantic\_ai} agent framework and the standardised \gls{mcp} interface.  
 This section describes the mechanisms used to initialise the agent, connect to the \glspl{mcp}, and enforce protocol correctness.
@@ -130,215 +131,25 @@ This logic allows seamless switching between cloud-based and local models.
 
 The agent also keeps track of the number of tool calls executed during the analysis, as well as the token usage associated with each step, both the input tokens sent to the model and the output tokens generated in response, enabling detailed monitoring of the interaction.
 
-\subsubsection{Gemini-CLI.}
+Some models require a different integration setup.
+
+\paragraph{Gemini-CLI.}
 If the model name is specified as \texttt{gemini-cli}, the program interacts with the Gemini Command-Line Interface\footnote{https://geminicli.com/} instead of the standard \gls{api} endpoint.
 %This configuration was introduced to bypass \gls{api} usage quotas and benefit from the higher request limits available with \texttt{gemini-2.5-pro}. 
 
 The integration is handled by the helper module \texttt{MCPs/geminiCLI.py}, which provides two key functions: \texttt{query\_gemini\_cli()} and \texttt{gemini\_response\_parser()}.
-%Since the Gemini CLI does not support distinct system and user prompts or structured JSON output (as required by \texttt{pydantic\_ai.Agent}), these functions implement a custom prompting and parsing layer.
-\texttt{query\_gemini\_cli()} builds a unified text prompt combining the system and user contexts, executes the \texttt{gemini} command via subprocess.
+The function \texttt{query\_gemini\_cli()} builds a unified text prompt combining the system and user contexts, executes the \texttt{gemini} command via subprocess.
 The model’s response is then passed to \texttt{gemini\_response\_parser()}, which cleans the raw \gls{cli} output and attempts to parse the result as JSON. If the output cannot be validated against the expected schema, the function retries; after four failed attempts, an error is raised.
 
-\subsubsection{Local LLM Backends (Ollama) and the Shimming Layer}
+\paragraph{Local LLM Backends}
 
-Local LLMs, particularly open-source models run through systems such as Ollama, do not provide native support for the \gls{mcp} protocol.
+Local \glspl{llm}, particularly open-source models run through systems such as Ollama, do not provide native support for the \gls{mcp} protocol.
 When used directly, these models frequently violate the protocol by hallucinating tool calls, mixing JSON with free text, or returning incomplete or malformed outputs.  
-To ensure protocol-correct behaviour, a dedicated \emph{shimming layer} is introduced.
+To ensure protocol-correct behaviour, a dedicated \emph{shimming layer} was introduced.
 
 The agent therefore instantiates an \texttt{oss\_model} backed by \texttt{MCPs/shimming\_agent.py}, which acts as a controlled execution environment.  
 Instead of allowing the model to interact freely with Jadx and Ghidra, the shimming agent constrains all communication to a strict JSON structure and enforces disciplined tool use.
-
-\paragraph{Behaviour enforced by the shim.}
-The system prompt associated with the shimming agent specifies that every model response must be a single JSON object containing either:
-\begin{itemize}
-    \item a tool invocation, e.g.\ \verb|{"action": "<tool_name>", "args": {...}}|, or
-    \item a final answer, e.g.\ \verb|{"action": "final", "result": {...}}|.
-\end{itemize}
-
-No free text is permitted outside this structure.  
-When the model outputs an action, the Python wrapper executes the corresponding tool through the \texttt{BasicMCPClient} provided by the \texttt{llama\_index} MCP utilities, forwards the result back to the model, and continues the interaction loop.
-
-Only when the model emits \texttt{"action": "final"} does the agent proceed to validating the output against the expected schema (e.g.\ \texttt{AppMetadata}, \texttt{VulnResult}).
-
-\paragraph{Execution loop.}
-During a shimming-mediated interaction:
-\begin{myenumerate}
-    \item the model proposes a tool call in JSON form;
-    \item the agent forwards the request to the appropriate \gls{mcp} server (Jadx or Ghidra);
-    \item the server returns structured evidence;
-    \item the agent returns this evidence to the model as the next input;
-    \item the model decides whether additional evidence is required or whether it can produce the final structured output.
-\end{myenumerate}
-
-If the final JSON object is well-formed and matches the target schema, the result is accepted; otherwise, the execution is interrupted.
-
-\paragraph{Purpose.}
-By mediating the interaction in this way, the shimming layer prevents protocol violations and ensures that local open-source models behave like fully \gls{mcp}-compatible agents.  
-%It preserves the generative capabilities of the underlying \gls{llm} while guaranteeing that tool calls, evidence retrieval, and final outputs remain valid and reproducible.
-
-% ----------------------
-\begin{comment}
-    
-
-\subsubsection{Local LLM (Ollama)}
-When the model name does not match the cloud prefixes (\texttt{gpt-}/\texttt{gemini-}), the agent assumes a local configuration and instantiates an \texttt{oss\_model} object backed by the \texttt{MCPs/shimming\_agent.py}. 
-%As mentions in Section~\ref{sec:shimming}, some models don't have the cabability to use \gls{mcp}, e.g. open source model, so the shimming\_agent will take the action, using the \gls{llm} provided my Ollama, and extra notions provided by the system pompt, the model is able to choose the methods needed, and required it usign \verb|("action": <tool_name>, "args": ( ... ),)|, then, using BasicMCPClient of llama\_index.tools.mcp, the wrapper python code execute the call instead the model, then the response is send to the \gls{llm} as a user prompt.
-%if the model have enought informations it can reply with \verb|{"action":"final","result": {...}}| with the final reply, this will check the correctness of output\_type i.e. the code will check that the moldel had reply with the required json with all the fields
-
-\paragraph{Shimming layer.}
-As discussed in Section~\ref{sec:shimming}, some models, particularly open-source ones, do not possess native support for the \gls{mcp} protocol. In these cases, the \texttt{shimming\_agent} acts as the execution layer that enables structured tool use.  
-The agent runs the \gls{llm} provided by Ollama and enriches it with the behavioural rules defined in the system prompt. With these rules in place, the model can select which tool it wants to invoke and express this decision through a JSON message of the form: \verb|{"action": "<tool_name>", "args": { ... }}|.
-When such an action is emitted, the Python wrapper executes the requested call on behalf of the model. This is done via the \texttt{BasicMCPClient} from \texttt{llama\_index.tools.mcp}, which sends the arguments to the corresponding \gls{mcp} server (e.g.\ Jadx or Ghidra) and collects the response.
-The result returned by the \gls{mcp} server is then forwarded back to the \gls{llm} as a new user prompt. This iterative loop continues until the model determines that it has gathered sufficient evidence to produce the final structured output. 
-At that point, the model returns a JSON object of the form: \verb|{"action": "final", "result": { ... }}|.
-
-The agent then validates this object against the expected \texttt{output\_type} (e.g.\ \texttt{AppMetadata} or \texttt{VulnResult}).  
-This validation ensures that: the model has produced a well-formed JSON object, all mandatory fields are present and the types match the schema.
-Only when these conditions are satisfied does the agent return the final result. Otherwise, the pipeline is interrupted, signalling that the model produced an incomplete or invalid output.
-
-%This mechanism allows models without native \gls{mcp} support to perform multi-step, tool-augmented reasoning while ensuring that all interactions remain safe, structured, and reproducible.
-
-%This configuration enables on-premise execution through Ollama, ensuring full data isolation and allowing the entire triage pipeline to run in offline or restricted environments.
-
-
-\section{Shimming Layer and \gls{mcp} Integration}
-\label{sec:shimming}
-
-A \textit{shimming layer} is required to enable a \gls{llm} to interact correctly with the \gls{mcp} tool ecosystem, particularly when the underlying model does not natively support structured \textit{tool calling}.  
-Open-source language models, including those deployed locally through frameworks such as Ollama\footnote{https://ollama.com/}, possess only a conceptual understanding of tool invocation. 
-
-They cannot retrieve information directly from the \glspl{mcp}; as a result, they tend to hallucinate missing details, producing incorrect or fabricated tool responses that cannot be consumed by an \gls{mcp}-compliant environment.
-
-
-% The shimming layer acts as an intermediary between the model and the protocol. 
-
-
-\end{comment}
-
-\begin{comment}
-    \subsection{Motivation}
-
-Without a shim, a \gls{llm} would frequently violate the protocol by hallucinating tool calls, emitting free-text instead of JSON, or skipping essential inspection steps.  
-Empirically, during development we observed several recurring issues:
-\begin{itemize}
-    \item the model inventing \texttt{"tool": "..."} calls that do not exist;
-    \item responses containing both JSON and natural language in the same turn;
-    \item attempts to return a final verdict without fetching the required evidence;
-    \item malformed JSON objects with missing fields;
-    \item routing mistakes (e.g.\ asking Jadx to decompile native functions).
-\end{itemize}
-
-These behaviours justify the need for a constraining layer capable of enforcing correctness and preventing the model from drifting outside the protocol boundaries.
-
-
-
-\end{comment}
-
-
-
-\begin{comment}
-\subsection{Design of the Shimming Layer} % [Design of the Shimming Layer]
-
-The shimming layer is implemented directly as an \textit{\gls{llm} agent} whose system prompt explicitly declares the available \glspl{mcp} and defines the behavioural rules that the model must follow.
-In particular, the prompt specifies the only two valid response formats: either a tool invocation or a final structured answer. Every output generated by the model must therefore be a JSON object containing exactly one of these elements. This constraint creates a disciplined interaction pattern in which the model is guided to communicate with the \glspl{mcp} correctly, despite lacking native protocol support.
-
-Through this mechanism, the shimming layer functions as a controlled execution environment: it shapes the model’s behaviour by constraining the allowed output structure, while leaving the model’s architecture and generative process unchanged. Tool invocations and final reports thus remain consistent with the expected schema.
-
-The system prompt provides the core operational discipline:  
-\begin{itemize}
-    \item responses must consist of a single JSON object;
-    \item the JSON must contain either a \texttt{tool} call with arguments, or a final \texttt{answer} field;
-    \item no free text is permitted outside the JSON structure;
-    \item only the tools explicitly declared in the agent’s configuration (system prompt) may be invoked.
-\end{itemize}
-
-When the model emits a tool call, the agent forwards it to the appropriate \gls{mcp} server; when the model returns a final answer, it is parsed into the expected schema to validate the correctness of the JSON output.
-
-\end{comment}
-
-
-\subsubsection{Shimming Logic: High-Level Pseudocode}
-
-The following pseudo-prompt and pseudo-code summarises the control flow implemented by the shimming layer.
-
-\begin{lstlisting}[caption={Pseudo-prompt of the shimming layer}]
-You are a tool-using assistant that can use tools to ...
-You can ONLY communicate in JSON.
-
-Available functionalities:
-
-< Schema of MCP's tools >
-
-For each step, reply ONLY with a valid JSON with the proposed schema.
-{"action": <tool_name>,  "args": { ... }}
-
-After receiving the tool results, you will be asked again.
-Only when explicitly instructed with "final" may you return your writeup:
-{"action": "final", "result": <writeup>}
-
-Rules:
-- NEVER output text outside of JSON.
-- NEVER skip directly to "final" without using a tool.
-- If you are unsure of arguments, fill with placeholders.
-- Your job is to call a tool on every turn until told otherwise.
-\end{lstlisting}
-\vfill
-\begin{lstlisting}[language=pseudoCode, caption={High-level pseudo-code of the shimming layer}]
-procedure ShimmingAgent(user):
-    initialise model with system prompt
-    initialise empty dialogue history
-
-    loop:
-        append user prompt to history
-        model_output ← query model(history)
-
-        json ← validate_and_extract_JSON(model_output)
-        if json is invalid:
-            prompt ← "Invalid JSON. Try again."
-            continue
-
-        if json.action == "final":
-            return json.result
-
-        result ← execute_tool(json.action, json.args)
-
-        if result is empty:
-            prompt ← "Malformed tool call. Try another."
-        else:
-            prompt ← "Tool Response: " + serialize(result)
-
-
-\end{lstlisting}
-
-%This pseudocode abstracts the behaviour implemented in the actual Python code while remaining architecture-neutral. It conveys the essential control flow: enforce JSON correctness, ensure proper tool invocation, route calls deterministically, and require evidence before allowing a final judgement.
-
-\begin{comment}
-    \subsection{Discussion}
-
-The shimming layer transforms a general-purpose \gls{llm} into an evidence-driven analysis engine.  
-Rather than weakening or constraining the model, the shim amplifies its reliability by aligning its behaviour with deterministic protocol rules. In practice, this hybrid architecture---LLM reasoning combined with protocol-level enforcement---provides the benefits of a classical static-analysis pipeline while retaining the adaptability and interpretative strengths of a large language model.
-
-\end{comment}
-
-
-\begin{comment}
-\subsection{\gls{mcp} Setup}
-
-\colorbox{red}{Jadx and Ghidra are launched as independent \glspl{mcp} servers. The Python orchestration layer connects to each server using \texttt{MCPServerStdio}, exposing a unified interface to the LLM.}
-
-The shim layer enforces:
-    
-\begin{itemize}
-    \item correct routing (Jadx for Java context, Ghidra for native code),
-    \item one tool call per turn,
-    \item error-handling and automatic retries,
-    \item normalisation of malformed JSON responses,
-    \item timeouts imposed via CLI parameters.
-\end{itemize}
-%This ensures deterministic behaviour even when using stochastic models.
-\end{comment}
-
-
+A detailed description of this mechanism is provided in Chapter~\ref{chp:mcp-shimming}.
 
 \subsection{\glsxtrshort{mcp} setup}
 
@@ -354,21 +165,27 @@ The integration of Jadx into the pipeline relies on the \texttt{jadx-ai-mcp}\foo
 Unlike Ghidra, Jadx does not require any additional configuration steps once the \gls{mcp} plugin is installed. 
 
 The server becomes available as soon as the Jadx \gls{gui} instance is running, and de designated port is free.
-Therefore, when analysis of an \gls{apk} begins, the program launches a dedicated Jadx session using the command: \verb|jadx-gui <apk>| 
+Therefore, when analysis of an \gls{apk} begins, the program launches a dedicated Jadx session using the command: \verb|jadx-gui <apk>|.
 This opens the \gls{gui} instance and allows the \texttt{jadx-ai-mcp} plugin to start its server.  
 
-Session management is handled by the helper module \texttt{jadx\_helper\_functions.py}, which contains utilities to start, monitor, and terminate the Jadx process.  
+Session management is handled by an helper module \texttt{jadx\_helper\_functions.py}, which contains utilities to start, monitor, and terminate the Jadx process.\\
 The function \texttt{start\_jadx\_gui()} launches the GUI, monitors its output stream, and blocks execution until the \gls{mcp} server is detected or a timeout occurs.  
 If Jadx fails to start within the configured timeout, the function terminates the process and aborts the analysis.  
 The module provides \texttt{kill\_jadx()}, used to gracefully stop the Jadx process when it is no longer required or when switching to a different \gls{apk}.  
 
 
 \paragraph{Cloud-based backends.}
-For cloud-based \gls{llm} backends (e.g.\ GPT-5.1 or Gemini-2.5), integration with \gls{mcp} servers can rely directly on the Pydantic AI framework\footnote{\url{https://docs.pydantic.dev/latest/}}.  
-The \texttt{MCPServerStdio} utility provided by Pydantic AI enables the orchestration layer to launch and manage \gls{mcp} servers as subprocesses, defining both the command used to start the server and the timeout required for its initialisation.
+For cloud-based \gls{llm} backends (e.g.\ GPT-5.1 or Gemini-3), integration with \gls{mcp} servers can rely directly on the Pydantic AI framework\footnote{\url{https://docs.pydantic.dev/latest/}}.  
+Pydantic AI provides the \texttt{MCPServerStdio} utility, which allows the orchestration layer to launch and manage \gls{mcp} servers as subprocesses, including the startup command and initialisation timeout.
 
-Listing~\ref{lst:jadxServer} illustrates how the Jadx \gls{mcp} server is initialised by constructing an \texttt{MCPServerStdio} instance, which invokes \texttt{jadx\_mcp\_server.py} from the directory specified by the \texttt{JADX\_MCP\_DIR} environment variable.
+Listing~\ref{lst:jadxServer} shows the initialisation of the Jadx \gls{mcp} server, where an \texttt{MCPServerStdio} instance is created to launch \texttt{jadx\_mcp\_server.py} from the directory specified by the system variable \texttt{JADX\_MCP\_DIR}.
 
+\medskip
+
+Once the \texttt{MCPServerStdio} is running, the agent connects to the \texttt{jadx-ai-mcp} endpoint to query project-level information.  
+Listing~\ref{lst:getMetadata} shows how the system retrieves the \gls{apk} metadata using a dedicated agent call.
+
+\vfill
 
 \begin{lstlisting}[language=pyMCP, caption={Function \texttt{make\_jadx\_server} used to initialise the Jadx \gls{mcp} connection}, label={lst:jadxServer}]
 def make_jadx_server(timeout: int = 60) -> MCPServerStdio:
@@ -379,10 +196,6 @@ def make_jadx_server(timeout: int = 60) -> MCPServerStdio:
     )
 \end{lstlisting}
 
-
-
-Once the \texttt{MCPServerStdio} is running, the agent connects to the \texttt{jadx-ai-mcp} endpoint to query project-level information.  
-Listing~\ref{lst:getMetadata} shows how the system retrieves the \gls{apk} metadata using a dedicated agent call.
 
 \begin{lstlisting}[language=pyMCP, caption={Method \texttt{get\_jadx\_metadata} that returns the app metadata from Jadx}, label={lst:getMetadata}]
 server: MCPServerStdio = make_jadx_server()
@@ -443,7 +256,7 @@ However, real applications often rely on multiple native libraries, and analysin
 
 To address this limitation, the base \texttt{GhidraMCP} implementation was extended with three additional methods:
 
-\begin{myitemize}
+\begin{itemize}
 
     \item \texttt{list\_available\_libs()}:
     Returns the list of all native libraries currently imported into the Ghidra project.  
@@ -464,7 +277,7 @@ To address this limitation, the base \texttt{GhidraMCP} implementation was exten
     When invoked, this function closes the active Ghidra GUI instance, identifies the native library that defines the requested method, and reopens Ghidra with that library included among the imported files.  
     This ensures that the \gls{llm} can retrieve code and metadata for methods located outside the initially loaded set of libraries, without requiring manual intervention.
 
-\end{myitemize}
+\end{itemize}
 
 These extensions enable controlled, sequential analysis of multiple native libraries while maintaining compatibility with Ghidra’s single-CodeBrowser \gls{mcp} constraint.
 
@@ -605,30 +418,90 @@ Most open-source LLMs only understand the abstract concept of “tool calls”, 
 For this reason, the pipeline incorporates a dedicated \emph{shimming layer} implemented in \texttt{shimming\_agent.py}.  
 This mechanism transparently enables the use of \gls{mcp} tools with models that lack \gls{mcp} support.
 
-\paragraph{Shimming layer.}
-The shimming agent surrounds the open-source model with a supervised loop that enforces deterministic, protocol-correct behaviour.  
-It operates as follows:
-\begin{enumerate}
-    \item It injects a system prompt (generated from \texttt{SHIMMING\_METADATA\_SYSTEM\_PROMPT} or \texttt{SHIMMING\_VULNDECT\_SYSTEM\_PROMPT}) that strictly constrains the model:
-    \begin{myitemize}
-        \item the model \emph{must} output exactly one JSON object per turn;
-        \item the JSON must contain either a tool call \verb|{"action": <tool>, "args": {...}}| or a final result \verb|{"action": "final", "result": {...}}|;
-        \item no additional text, explanations, or code fences are permitted.
-    \end{myitemize}
-    \item Each assistant JSON tool call is intercepted by the shim.
-    \item The call is forwarded to the appropriate \gls{mcp} backend:
-    \begin{myitemize}
-        \item \texttt{jadx-ai-mcp} (running on \verb|8651/sse|) for manifest, resource, and Java-side exploration;
-        \item \texttt{GhidraMCP} (running on \verb|8081/sse|) for native analysis, decompilation, function/xref queries, and symbol inspection.
-    \end{myitemize}
-    \item The result is formatted as a new user message of the form:\\
-    \verb|Tool Response: <json-encoded-result>| and sent back to the model.
-    \item The loop continues until the model emits a valid \verb|"action": "final"| object that passes \texttt{pydantic} validation.
-\end{enumerate}
+\paragraph{Shimming layer.} \label{chp:mcp-shimming}
 
-This layer ensures that even models lacking native \gls{mcp} support behave as well-structured \gls{mcp} agents.  
-Whenever the system detects malformed JSON, missing fields, or any violation of the protocol, the shim responds with a corrective prompt instructing the \gls{llm} to retry.  
-Only when the generated output satisfies both the protocol and the \texttt{pydantic} schema does the shimming agent return control to the main triage loop.
+The shimming agent wraps the open-source model in a supervised execution loop that enforces deterministic, protocol-correct behaviour.  
+Its role is to ensure that models without native \gls{mcp} support can still interact reliably with external tools by constraining their outputs to a strict, verifiable format.
+
+The system prompt of the shimming agent specifies that every model response must be a single JSON object containing either:
+
+\begin{myitemize}
+    \item a tool invocation, e.g.\ \verb|{"action": "<tool_name>", "args": {...}}|, or
+    \item a final answer, e.g.\ \verb|{"action": "final", "result": {...}}|.
+\end{myitemize}
+ 
+When the model outputs an action, the Python wrapper executes the corresponding tool through the \texttt{BasicMCPClient} provided by the \texttt{llama\_index} MCP utilities, forwards the result back to the model, and continues the interaction loop.
+
+Only when the model emits \texttt{"action": "final"} does the agent proceed to validating the output against the expected schema (e.g.\ \texttt{AppMetadata}, \texttt{VulnResult}).
+
+During a shimming-mediated interaction, the execution loop proceeds as follows:
+\begin{myenumerate}
+    \item the model receives the available tools through the system prompt;
+    \item then proposes a tool call in JSON form;
+    \item the shimmer forwards the request to the appropriate \gls{mcp} server (Jadx or Ghidra);
+    \item the server returns structured evidence;
+    \item the shimmer returns this evidence to the model as the next input;
+    \item the model decides whether additional evidence is required or whether it can produce the final structured output.
+\end{myenumerate}
+
+If the final JSON object is not well-formed or does not match the target schema, the model is prompted to generate a corrected response instead of terminating the execution.
+
+The purpose of the shimming layer is to mediate the interaction in a way that prevents protocol violations and ensures that local open-source models behave like fully \gls{mcp}-compatible agents.
+
+
+%\subsubsection{Shimming Logic: High-Level Pseudocode}
+
+The following pseudo-prompt and pseudo-code summarises the control flow implemented by the shimming layer.
+
+\begin{lstlisting}[caption={Pseudo-prompt of the shimming layer}]
+You are a tool-using assistant that can use tools to ...
+You can ONLY communicate in JSON.
+
+Available functionalities:
+
+< Schema of MCP's tools >
+
+For each step, reply ONLY with a valid JSON with the proposed schema.
+{"action": <tool_name>,  "args": { ... }}
+
+After receiving the tool results, you will be asked again.
+Only when explicitly instructed with "final" may you return your writeup:
+{"action": "final", "result": <writeup>}
+
+Rules:
+- NEVER output text outside of JSON.
+- NEVER skip directly to "final" without using a tool.
+- If you are unsure of arguments, fill with placeholders.
+- Your job is to call a tool on every turn until told otherwise.
+\end{lstlisting}
+
+\begin{lstlisting}[language=pseudoCode, caption={High-level pseudo-code of the shimming layer}]
+procedure ShimmingAgent(user):
+    initialise model with system prompt
+    initialise empty dialogue history
+
+    loop:
+        append user prompt to history
+        model_output ← query model(history)
+
+        json ← validate_and_extract_JSON(model_output)
+        if json is invalid:
+            prompt ← "Invalid JSON. Try again."
+            continue
+
+        if json.action == "final":
+            return json.result
+
+        result ← execute_tool(json.action, json.args)
+
+        if result is empty:
+            prompt ← "Malformed tool call. Try another."
+        else:
+            prompt ← "Tool Response: " + serialize(result)
+
+
+\end{lstlisting}
+
 
 
 
@@ -644,12 +517,12 @@ Only when the generated output satisfies both the protocol and the \texttt{pydan
 
 
 As mentioned in Chapter~\ref{chp:preliminaries}, the triage procedure begins from the output generated by POIROT.  
-During its \emph{Triage} phase\footnote{\url{https://github.com/HexHive/droidot/\#triage}}, POIROT produces a file named \texttt{folder2backtraces.txt}, shown in Listing~\ref{lst:POIROT-output}.  
+During its \emph{Triage phase}\footnote{\url{https://github.com/HexHive/droidot/\#triage}}, POIROT produces a file named \texttt{folder2backtraces.txt}, shown in Listing~\ref{lst:POIROT-output}.  
 This file serves as the primary input for the analysis performed in this project.  
 After running POIROT on a batch of applications, the resulting directory structure for the target APK appears as illustrated in Figure~\ref{fig:poirot_output}.
 
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \scalebox{0.8}{\input{tikzpicture/targetAPKS}}
     \caption[Directory structure of POIROT's output]{Directory structure of the target APKs as produced by POIROT, including extracted libraries and reproduced crash outputs.}
@@ -681,6 +554,9 @@ The resulting symbol table is cross-referenced with the crash stack trace in ord
 This filtering step avoids unnecessary \gls{mcp} queries and reduces the amount of contextual information that must be supplied to the \gls{llm}.  
 Moreover, Ghidra cannot reliably open a large number of libraries within the same project, making it essential to limit the analysis to the subset of binaries that are actually relevant to the crash.
 
+If additional libraries become relevant during the analysis, the agent can still access them on demand through the \texttt{open\_external\_method} \gls{mcp} function.  
+This mechanism allows the \gls{llm} to load previously excluded native binaries autonomously, ensuring that methods outside the initial import set can be inspected without manual intervention.
+
 The resulting filtered map is then recorded in the \texttt{CrashSummary} object associated with the crash.  
 This enriched crash descriptor is subsequently passed to the triage agent, ensuring that the analysis stage focuses exclusively on the libraries that may have contributed to the fault.
 
@@ -690,6 +566,8 @@ A second input provided to the model through the \texttt{CrashSummary} object is
 The purpose of this artefact is to reconstruct the sequence of Java method invocations that lead to the JNI entry point responsible for calling the native function in which the crash occurred.  
 While the native stack trace already describes the execution path within the \texttt{.so} file, the \gls{jcg} complements it with the higher-level control flow within the application.
 
+\newpage
+
 The extraction is performed in two phases:
 
 \begin{enumerate}
@@ -697,11 +575,11 @@ The extraction is performed in two phases:
     A complete flow graph of the application is first generated using FlowDroid\footnote{https://github.com/secure-software-engineering/FlowDroid}, which statically analyses the APK and produces a comprehensive \gls{jcg} covering all possible execution paths.  
     The resulting structure is stored in a large JSON file. 
 
-    \item \textbf{Efficient filtering using \texttt{rg}.}  
-    Because the FlowDroid JSON may exceed multiple gigabytes, directly parsing it in memory would be inefficient.  
-    Instead, the \texttt{rg} (ripgrep) utility is used to perform fast pattern searches over the file.  
-    This allows the pipeline to extract only the subset of call edges relevant to the method chain leading to the JNI bridge.  
-    The result is a compact, filtered \gls{jcg} that contains only the calls involved in the crash path.
+    \item \textbf{Construction of a filtered call graph.}  
+    Starting from the complete FlowDroid output, only the call sequence that reaches the JNI bridge associated with the crash are kept.
+    The result is a compact filtered \gls{jcg} containing the precise Java-level call chain leading to the native entry point.
+    %To avoid loading the entire multi-gigabyte JSON structure in memory, the extraction is performed through targeted pattern searches (implemented using \texttt{rg}), which isolate only the call edges relevant to the crash path.  
+
 \end{enumerate}
 
 This filtered \gls{jcg} is then attached to the \texttt{CrashSummary}, enabling the \gls{llm} to reason about both native- and Java-level execution paths.  

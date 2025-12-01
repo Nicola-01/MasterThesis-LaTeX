@@ -16,7 +16,7 @@
 \node[layer, minimum width=\WNode, below=\NDistanceV of L1] (L2) {\textbf{IDEs and code editors}\\Claude Code, Goose};
 \node[layer, minimum width=\WNode, below=\NDistanceV of L2] (L3) {\textbf{Other AI applications}\\5ire, Superinterface};
 % Box che "abbraccia" i tre nodi: il suo centro è a metà verticale
-\node[groupbox, fit=(L1) (L3), label={[grouplabel, label distance=\NDistanceV]south:\gls{mcp} hosts}] (SXBOX) {};
+\node[groupbox, fit=(L1) (L3), label={[grouplabel, label distance=\NDistanceV]south:\gls{mcp} Hosts}] (SXBOX) {};
 
 % =============== BLOCCO CENTRALE (CENTRO): 1 elemento ===========
 % Posizionato "right=..." RISPETTO A SXBOX (non L1): così condivide la stessa y del centro
@@ -29,7 +29,7 @@
 \node[layer, minimum width=\WNode, right={\NDistanceH*2+\WNode} of L1] (R1) {\textbf{Data and file systems}\\PostgreSQL, SQLite, GDrive};
 \node[layer, minimum width=\WNode, below=\NDistanceV of R1] (R2) {\textbf{Development tools}\\Git, Sentry, etc.};
 \node[layer, minimum width=\WNode, below=\NDistanceV of R2] (R3) {\textbf{Productivity tools}\\Slack, Google Maps, etc.};
-\node[groupbox, fit=(R1) (R3), label={[grouplabel, label distance=\NDistanceV]south:\gls{mcp} clients}] (DXBOX) {};
+\node[groupbox, fit=(R1) (R3), label={[grouplabel, label distance=\NDistanceV]south:\gls{mcp} Server}] (DXBOX) {};
 
 % --- Stile frecce ---
 \tikzset{
