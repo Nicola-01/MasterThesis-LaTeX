@@ -585,3 +585,6 @@ folder style/.style={draw=foldercolor!80!black, top color=foldercolor!40, bottom
 \newcommand\MyGradeColor[2]{%
   \MyBoxColor{#1}{(#2~\%)}{lighBlue}{#2}%
 }
+
+\usepackage{longtable}
+\usepackage{adjustbox}

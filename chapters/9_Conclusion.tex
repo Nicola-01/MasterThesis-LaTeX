@@ -3,7 +3,7 @@
 
 
 
-This thesis presented an autonomous \gls{llm} triage pipeline, that integrates the \glsxtrlong{mcp} (\glsxtrshort{mcp}) to analyse native crashes in Android applications.  
+This thesis presented an autonomous \gls{llm}-base triage pipeline, that integrates the \glsxtrlong{mcp} (\glsxtrshort{mcp}) to analyse native crashes in Android applications.  
 The goal, was to support vulnerability assessment in scenarios where manual crash inspection is performed, which can be time-consuming and labour-intensive, and where applications rely on native components accessed through the \glsxtrlong{jni}.
 
 
@@ -11,6 +11,8 @@ The proposed system integrates two reverse-engineering tools into the \gls{llm}�
 The evaluation demonstrated that the pipeline reliably identifies real vulnerabilities, achieving low false-negative rates and providing structured explanations, confidence scores, and evidence traces.  
 
 The TP-LINK tpCamera case study, further shows that the system can approximate expert-level analysis. The \gls{llm} classification aligns with the ground-truth vulnerability reported in POIROT (CVE-2023-30273), correctly identifying the unsafe lifecycle of the encoder context and the conditions leading to a use-after-free.
+
+\textcolor{blue}{The evaluation showed that the workflow achieves roughly 66~\% accuracy, and keeps false negatives to a low rate (3--5~\%). It also shows the benefits from the availability of Java–to–native contextual information, through the \glsxtrlong{jcg}, which improves both precision and overall stability.} \textcolor{red}{Taken together, these results provide quantitative evidence that the system is well suited as a fast, automated first-line filter for vulnerability assessment.}
 
 At the same time, the evaluation highlights several areas where the tool can be improved.
 Precision remains modest, due to incomplete crash traces and the conservative behaviour of general-purpose \glspl{llm} tends to over-approximate risk when information is missing.  

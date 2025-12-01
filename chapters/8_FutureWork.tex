@@ -11,20 +11,21 @@ The results suggest that LLM-based triage, when enriched with context retrieved 
 A key limitation of the current implementation is the lack of visibility into the inputs that triggered each crash.  
 Since POIROT does not expose the generated test cases or more detailed execution logs, the model is forced to reason solely from stack traces and decompiled code, without knowing which specific input conditions caused the failure.
 
-Providing richer execution context—such as the exact fuzzer input, argument values or runtime logs—would enable the \gls{llm} to make more grounded and accurate classifications.  
+Providing richer execution context, such as the exact fuzzer input, argument values or runtime logs, would enable the \gls{llm} to make more grounded and accurate classifications.  
 Such information could help the model distinguish crashes triggered by malformed or unrealistic inputs from those that reflect genuine, exploitable vulnerabilities.  
 
 \section{Use of Specialised Models for Triage}
 
 The current approach relies on general-purpose \glspl{llm}, guided through meta-prompts and tool use.  
-Using models specifically adapted or trained for vulnerability analysis could improve stability, enhance recognition of recurring vulnerability patterns, and provide more consistent assessments across similar crashes.
+Using models specifically adapted or trained for vulnerability analysis could improve stability, enhance recognition of recurring vulnerability patterns, and provide more consistent assessments across similar crashes as recent empirical evidence shows that fine-tuned, code-specialised models systematically outperform general \glspl{llm} across detection, assessment, and localisation tasks \cite{10706805}.
 
 %\textcolor{red}{find some example (pentestGPT ?)}
 
 \section{Persistent Agents}
+\textcolor{red}{Forse questo è quello che mi conince meno, avrebbe una strana realizazione e porbabilmente a lungo andare avrebbe allucinazioni il modello. Ed è comunqu simile al RAG sotto}
 
 In the current implementation, each crash is analysed in isolation: the agent processes the crashes associated with a method, interacts with the tools, produces a report, and then its context is reset.  
-A possible extension is to maintain a \emph{persistent} triage agent over time. That could be preceded by a lightweight training or calibration phase using an available ground-truth labeled   dataset.  
+A possible extension is to maintain a \emph{persistent} triage agent over time. That could be preceded by a lightweight training or calibration phase using an available ground-truth labeled dataset.  
 Such an approach would allow the agent to internalise verified classifications and use them as stable reference points in subsequent analyses.
 
 A persistent agent could progressively accumulate knowledge about specific libraries, recurring code idioms, and previously classified vulnerabilities.  
@@ -33,7 +34,8 @@ It could also enforce dataset-wide consistency, ensuring that similar crash patt
 
 \section{Use of \glsxtrlong{rag}}
 
-\gls{rag} supplements an \gls{llm} with an external knowledge base that can be queried at inference time. 
+\gls{rag} supplements an \gls{llm} with an external knowledge base that can be queried at inference time.
+In practice, it augments the model by retrieving relevant task-specific data before generation, rather than relying solely on the \gls{llm}'s internal representations.
 
 Recent work shows that RAG can strengthen factual grounding in vulnerability analysis.  
 LProtector\cite{sheng2024lprotectorllmdrivenvulnerabilitydetection} improves detection accuracy and explainability by retrieving security-relevant context, while VulRAG\cite{du2025vulragenhancingllmbasedvulnerability} demonstrates that retrieving similar vulnerabilities or code fragments leads to more reliable classification.

@@ -28,7 +28,7 @@ The pipeline exhibits a low number of False Negatives, indicating that genuine v
 
 \section{Limitations}
 
-The evaluation performed in this thesis is subject to several limitations that affect the results.
+The evaluation performed in this thesis is subject to some limitations that affect the results.
 
 The quality of the classification strongly depends entirely on the crash traces produced by POIROT. When stack trace contain missing or unresolved entries (marked as ``\texttt{??}''), the model lacks essential execution context and tends to assume a worst-case scenario, contributing to the high false-positive rate observed in the evaluation.
 
@@ -57,7 +57,7 @@ The flaw is triggered when the application invokes the MP4 encoding pipeline wit
 
 \begin{enumerate}
     \item The JNI function \texttt{packVideo} receives attacker-controlled frame data and a size parameter.
-    \item The native function \texttt{mp4\_write\_one\_h264} tears down the encoder context on malformed input: it closes the file, frees multiple internal buffers, and finally frees the global structure \texttt{iniPacker\_global}.
+    \item The native function \texttt{mp4\_write\_one\_h264} tears down the encoder context on malformed input: it closes the file, frees multiple internal buffers, and then frees the global structure \texttt{iniPacker\_global}.
     \item A second invocation of \texttt{packVideo} reuses the same freed encoder context, triggering a \emph{use-after-free} where the freed structure is overwritten by attacker-controlled data.
     \item The overwritten structure corrupts the file pointer passed to \texttt{fclose()}, enabling arbitrary code execution under certain conditions.
 \end{enumerate}
@@ -66,14 +66,12 @@ The vulnerability has practical security impact: an attacker on the same network
 
 \subsection{\glsxtrshort{llm} Classification Summary}
 
-The \gls{llm}-based triage correctly identifies the crash in \texttt{tpCamera} as a genuine vulnerability, assigning a high severity level and a confidence score of 0.85.  
+The \gls{llm}-based triage correctly identifies the crash in \texttt{tpCamera} as a genuine vulnerability, assigning a \emph{high} severity level and a confidence score of 0.85.  
 The model attributes the crash to a memory-safety error in the native MP4 encoding pipeline, centred around the logic implemented in the \texttt{mp4\_write\_one\_h264} routine in \texttt{libTPMp4Encoder.so}.
-
-The full classification output for this application is provided in Appendix~\ref{chp:appendixA}.
 
 \medskip
 
-\noindent The classification highlights three main contributing factors:
+The full classification output for this application is provided in Appendix~\ref{chp:appendixA}. The analysis points to three main contributing factors:
 
 \begin{itemize}
     \item \textbf{Unvalidated size parameter}: The JNI method \texttt{packVideo} forwards an unbounded, attacker-influenced size directly to the native encoder without consistency checks.
@@ -85,6 +83,7 @@ The full classification output for this application is provided in Appendix~\ref
 
 
 The model concludes that the vulnerability likely enables heap corruption or a double-free/use-after-free condition, mapping it to CWE-787 (Out-of-bounds Write), CWE-415 (Double Free), and CWE-416 (Use After Free).  
+
 It also identifies a plausible exploitation vector: \texttt{"trigger\_method"}: ``Malformed H.264 frame buffer passed via MP4Encoder.packVideo with inconsistent size parameter''.
 
 \subsection{Comparison with Ground Truth}
@@ -105,7 +104,7 @@ Overall, the model captures the key structural and behavioural elements of the v
 
 \subsection{Interpretation of Results}
 
-This comparison shows that the \gls{llm}-based triage is capable of reconstructing the essential characteristics of a complex native vulnerability using only stack-trace evidence, decompiled code, and contextual information accessed through \gls{mcp} tools.  
+This comparison shows that the \gls{llm}-based triage is capable of reconstructing the essential characteristics of a complex native vulnerability using stack-trace evidence, decompiled code, and contextual information accessed through \gls{mcp} tools.  
 The model correctly identifies the use-after-free pattern, the conditions that lead to encoder-state corruption, and the attacker-controlled inputs required to reach the vulnerable code paths.
 
 The analysis produced by the \gls{llm} is not only consistent with the POIROT ground truth, but also captures several realistic exploitation vectors. Demonstrates that the proposed pipeline can approximate expert-level reasoning and align closely with real-world vulnerability reports, validating its effectiveness as an initial triage mechanism.
