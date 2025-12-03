@@ -43,6 +43,12 @@ LProtector\cite{sheng2024lprotectorllmdrivenvulnerabilitydetection} improves det
 So, a possible extension would be to build a repository of pre-analysed APKs, crashes, and ground-truth labels, allowing the agent to retrieve historical cases similar to the current one.  
 Using these annotated crashes as an external reference, as ground truth and as concrete comparison, could help the agent anchor its reasoning, reduce ambiguity, and improve the quality and consistency of the classification.
 
+\section{GAN-like Multi-Agent Structure}
+
+Another possible extension is to explore a GAN-like architecture composed of multiple \gls{llm} agents with opposing objectives.  
+One agent would attempt to demonstrate that a crash is exploitable, while a second agent would argue the opposite by seeking alternative explanations or benign root causes.  
+A third, neutral agent would then act as an adjudicator, evaluating the evidence produced by both sides and issuing the final classification.  
+%Such an adversarial setup could expose weak or ambiguous reasoning, reduce overconfidence, and lead to more robust and better-grounded triage decisions.
 
 \section{\glsxtrshort{llm}-Based Exploit Generation and Validation}
 
@@ -50,10 +56,3 @@ At the current stage, the agent is limited to analysing crashes and explaining p
 A natural extension would be to introduce a post-triage phase in which the \gls{llm} engages in an iterative reasoning-and-action cycle, similar to ReAct-style prompting.  
 Given a crash, the agent would generate a candidate exploit input or harness modification, execute it in a controlled environment, observe the resulting behaviour and logs, and, if necessary, query additional code context via \gls{mcp}.  
 Based on this feedback loop, the agent could refine or redesign the exploit attempt, repeating the process until the vulnerability is confirmed as either exploitable or not.
-
-\section{GAN-like Multi-Agent Structure}
-
-Another possible extension is to explore a GAN-like architecture composed of multiple \gls{llm} agents with opposing objectives.  
-One agent would attempt to demonstrate that a crash is exploitable, while a second agent would argue the opposite by seeking alternative explanations or benign root causes.  
-A third, neutral agent would then act as an adjudicator, evaluating the evidence produced by both sides and issuing the final classification.  
-%Such an adversarial setup could expose weak or ambiguous reasoning, reduce overconfidence, and lead to more robust and better-grounded triage decisions.

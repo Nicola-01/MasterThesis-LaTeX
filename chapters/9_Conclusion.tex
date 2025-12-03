@@ -7,14 +7,18 @@ This thesis presented an autonomous \gls{llm}-base triage pipeline, that integra
 The goal, was to support vulnerability assessment in scenarios where manual crash inspection is performed, which can be time-consuming and labour-intensive, and where applications rely on native components accessed through the \glsxtrlong{jni}.
 
 
-The proposed system integrates two reverse-engineering tools into the \gls{llm}’s reasoning loop: \emph{Jadx}, for bytecode analysis and \emph{Ghidra}, for native disassembly. Such process enables context-aware classification of \emph{POIROT}-generated crashes.  
-The evaluation demonstrated that the pipeline reliably identifies real vulnerabilities, achieving low false-negative rates and providing structured explanations, confidence scores, and evidence traces.  
+The proposed system integrates two reverse-engineering tools into the \gls{llm}’s reasoning loop: \emph{Jadx}, for bytecode analysis and \emph{Ghidra}, for native disassembly. Such process enables context-aware classification of \emph{POIROT}-generated crashes. 
+
+%\textcolor{green}{The evaluation demonstrated that the pipeline reliably identifies real vulnerabilities, achieving low false-negative rates and providing structured explanations, confidence scores, and evidence traces.  }
+
+The evaluation, across 137 crashes from 80 real-world applications, demonstrated that the workflow reliably identifies real vulnerabilities, achieving consistently low false-negative rates (3--5~\%), with an an overall accuracy of roughly 66~\%. Its performance improved substantially when Java–to–native contextual information is available through the \glsxtrlong{jcg}, accuracy increases to 77~\% and precision more than doubles, confirming the importance of cross-layer information in reducing over-approximation. 
+
+%Across 137 crashes from 80 real-world applications, the system achieves an overall accuracy of 66~\%, with consistently low false-negative rates (3–5~\%). When Java-side context is available through a filtered Java Call Graph, accuracy increases to 77~\% and precision more than doubles, confirming the importance of cross-layer information in reducing over-approximation. A detailed case study on TP-LINK’s tpCamera reproduces and correctly characterises the real vulnerability later assigned CVE-2023-30273, demonstrating that the system can recover expert-level reasoning patterns using structured evidence.
+
 
 The TP-LINK tpCamera case study, further shows that the system can approximate expert-level analysis. The \gls{llm} classification aligns with the ground-truth vulnerability reported in POIROT (CVE-2023-30273), correctly identifying the unsafe lifecycle of the encoder context and the conditions leading to a use-after-free.
 
-\textcolor{blue}{The evaluation showed that the workflow achieves roughly 66~\% accuracy, and keeps false negatives to a low rate (3--5~\%). It also shows the benefits from the availability of Java–to–native contextual information, through the \glsxtrlong{jcg}, which improves both precision and overall stability.} \textcolor{red}{Taken together, these results provide quantitative evidence that the system is well suited as a fast, automated first-line filter for vulnerability assessment.}
-
-At the same time, the evaluation highlights several areas where the tool can be improved.
+At the same time, the evaluation performed by the tool highlighted several areas where the tool can be improved.
 Precision remains modest, due to incomplete crash traces and the conservative behaviour of general-purpose \glspl{llm} tends to over-approximate risk when information is missing.  
 Therefore, at the current stage, the tool rather than replacing traditional analyses, can serve as a useful integrative tool that accelerates classification and provides a structured starting point for further and more precise investigation.  
 
@@ -25,7 +29,6 @@ Future work should focus on improving precision through richer static and dynami
 
 %\textcolor{red}{Da qua non sono più convinto, questo ripete quanto prima circa}
 %The work demonstrates the viability of using \glspl{llm} to enhance automated vulnerability triage, offering an approach that scales to applications with native components and reduces the manual effort required for initial crash assessment.
-
 
 
 In conclusion, this thesis shows that \gls{llm}-based crash triage, when combined with reverse-engineering tools through \gls{mcp}, offers a promising direction for scalable vulnerability analysis.  

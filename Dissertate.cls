@@ -588,3 +588,4 @@ folder style/.style={draw=foldercolor!80!black, top color=foldercolor!40, bottom
 
 \usepackage{longtable}
 \usepackage{adjustbox}
+\usepackage{makecell}

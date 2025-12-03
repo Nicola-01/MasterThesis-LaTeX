@@ -5,7 +5,13 @@
 % comments, and \textcolor{red}{...} sections as required.
 % The content now aligns with the conceptual design from Chapter 5.
 
-The implementation realises the design described in Chapter~\ref{chp:design} through a Python-based orchestration layer built around three core elements: (i) structured data models, (ii) helper functions for integrate the \gls{mcp}, and (iii) specialised prompting templates to ensure reproducible and deterministic behaviour across crash analyses. Also describes the concrete system architecture, library dependencies, internal module structure, and the integration workflow between the \gls{llm}, Jadx/Ghidra \glspl{mcp}, and POIROT’s crash artefacts.
+The implementation realises the design described in Chapter~\ref{chp:design} through a Python-based orchestration layer built around three core elements: (i) structured data models, (ii) helper functions for integrating the \gls{mcp}, and (iii) specialised prompting templates to ensure reproducible and deterministic behaviour across crash analyses. It also describes the concrete system architecture, library dependencies, internal module structure, and the integration workflow between the \gls{llm}, Jadx/Ghidra \glspl{mcp}, and POIROT’s crash artefacts.
+
+\medskip
+
+The full source code is available at \href{https://github.com/Nicola-01/LLM-Triaging}{\texttt{github.com/Nicola-01/LLM-Triaging}}.
+
+
 % Where relevant, we also document operational constraints, practical issues encountered during development, and the rationale behind critical implementation decisions.
 
 \section{Libraries and Dependencies}

@@ -143,9 +143,10 @@ An \gls{mcp} \emph{client} is a protocol-level component created by the host to 
 In Figure~\ref{fig:mcp-interaction}, clients appear as the ''middle`` connectors: they translate host intents (e.g., ''run tool T``) into \gls{api} call and relay the server’s results back to the host.
 
 \subsection{MCP Server}
-An \gls{mcp} \emph{server} wraps external systems (e.g. files, databases, reverse-engineering tools) and presents them as protocol objects: \textit{Tools}: invokable functions with JSON Schemas. \textit{Resources}: readable artefacts. \textit{Prompts}: reusable task templates. Servers publish a capability manifest so that clients can discover what is available and how to access it. The \gls{mcp} \emph{server} provides tools that enable \glspl{llm} to perform actions, carry out deterministic computations and interact with external services. 
+An \gls{mcp} \emph{server} wraps external systems (e.g. files, databases, reverse-engineering tools) and presents them as protocol objects. It exposes\textit{tools}, which expose invokable functions with JSON Schemas; \textit{resources}, which provide readable artefacts; and \textit{prompts}, which offer reusable task templates. Servers publish a capability manifest so that clients can discover what is available and how to access it. The \gls{mcp} \emph{server} provides tools that enable \glspl{llm} to perform actions, carry out deterministic computations and interact with external services. 
 This design decouples model/UX from system integrations and enables reuse across different hosts and models \cite{mcp-tools}. 
 In Figure~\ref{fig:mcp-interaction}, servers sit on the right, each encapsulating one integration boundary (e.g., Jadx, Ghidra, a code search index).
+
 
 \subsection{Interaction}
 Figure~\ref{fig:mcp-interaction} illustrates a typical flow. 
@@ -181,7 +182,7 @@ The \gls{cve} Programme assigns unique identifiers to publicly disclosed vulnera
 \subsection{\glsxtrlong{cvss} (\glsxtrshort{cvss})}
 The \gls{cvss} is an open, vendor-neutral framework for describing the intrinsic characteristics and severity of a vulnerability through a set of metrics that yield a numerical score and qualitative severity band. \gls{cvss} communicates \emph{severity}, not overall \emph{risk}; operational risk assessment should incorporate asset context, threat activity, and environmental factors beyond the Base score \cite{cvss31-user-guide}.
 
-\paragraph{Relation}
+\subsection{Relation}
 In triage and remediation workflows, \gls{cve} entries identify concrete vulnerabilities; each entry can be mapped to \gls{cwe} identifiers that explain the underlying weakness type; \gls{cvss} scores (often provided by downstream databases) express the vulnerability’s technical severity. Together, \gls{cwe}$\rightarrow$\gls{cve}$\rightarrow$\gls{cvss} forms a pipeline from root-cause taxonomy to instance tracking and severity quantification \cite{nvd-cve-process}.
 
 \section{Vulnerability Triage}

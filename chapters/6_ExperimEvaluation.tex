@@ -47,7 +47,7 @@ These cases were still processed by the triage pipeline, but without Java-side c
 Table~\ref{tab:apps} summarises all applications used in the evaluation and reports, for each APK, the metrics collected during the triage process.  
 The columns are defined as follows:
 
-\begin{itemize}
+\begin{myitemize}
     \item \textbf{App} and \textbf{Version}: package name and exact APK version analysed.
     \item \textbf{Methods}: total number of native methods evaluated for that application.  
     \item \textbf{Crashes}: number of distinct crashes produced by POIROT; a single method may generate multiple crashes.
@@ -55,7 +55,7 @@ The columns are defined as follows:
     \item \textbf{Input token} and \textbf{Output token}: total token consumption across all \gls{llm} requests for that application.
     \item \textbf{LLM request}: number of request that the model sent to the API, during the full triage stage.
     \item \textbf{LLM Tool Calls}: number of successful MCP tool invocations (Jadx or Ghidra) performed during the analysis.
-\end{itemize}
+\end{myitemize}
 
 On average, the analysis time per application was 2 minutes and 38 seconds.  
 Normalising by method rather than by application shows that each method produced an average of 2.13 crashes, with a mean processing time of 42 seconds per method.  
@@ -86,22 +86,24 @@ Table~\ref{tab:apps_requests} reports, for each application, the number of LLM r
 Table~\ref{tab:apps_tokens} reports input and output token usage for each application.
 \end{comment}
 
-\textcolor{red}{Sto ancora cercando di sistemare questa tabella, ma intanto ve la mado così}
-
-\textcolor{red}{In generale, essendo lunga la tabella, va bene qui o meglio nel appendix?}
-
+\textcolor{red}{Essendo lunga la tabella, va bene qui o meglio nel appendix?}
 
 \begingroup
-  \small
-  \setlength{\tabcolsep}{3pt}
-\begin{longtable}{|p{3cm}|c|c|c|c|c|c|c|c|}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+
+\begin{longtable}{|l|c|c|c|c|c|c|c|c|}
 \hline
-\textbf{App} & \textbf{Version} & \textbf{Methods} & \textbf{Crashes} & \textbf{Time (MM:SS)} & \textbf{Input token} & \textbf{Output token} & \textbf{LLM request} & \textbf{LLM Tool Calls} \\
+\textbf{App} & \textbf{Version} & \textbf{Methods} & \textbf{Crashes} & \makecell{\textbf{Time}\\(M:S)} &
+\makecell{\textbf{Input}\\\textbf{Token}} & \makecell{\textbf{Output}\\\textbf{Token}} & 
+\makecell{\textbf{LLM}\\\textbf{request}} & \makecell{\textbf{LLM Tool}\\\textbf{Calls}} \\
 \hline
 \endfirsthead
 
 \hline
-\textbf{App} & \textbf{Version} & \textbf{Methods} & \textbf{Crashes} & \textbf{Time (MM:SS)} & \textbf{Input token} & \textbf{Output token} & \textbf{LLM request} & \textbf{LLM Tool Calls} \\
+\textbf{App} & \textbf{Version} & \textbf{Methods} & \textbf{Crashes} & \makecell{\textbf{Time}\\(M:S)} &
+\makecell{\textbf{Input}\\\textbf{Token}} & \makecell{\textbf{Output}\\\textbf{Token}} & 
+\makecell{\textbf{LLM}\\\textbf{request}} & \makecell{\textbf{LLM Tool}\\\textbf{Calls}} \\
 \hline
 \endhead
 
@@ -122,7 +124,7 @@ com.didiglobal.driver & 7.5.88 & 1 & 8 & 06:48 & 215355 & 14366 & 31 & 41 \\
 com.elevenst & 9.3.4 & 1 & 1 & 01:14 & 358406 & 2707 & 9 & 9 \\
 com.ford.fordpass & 4.23.1 & 1 & 4 & 03:34 & 198312 & 10642 & 17 & 42 \\
 com.ford.fordpasseu & 4.23.1 & 1 & 3 & 03:05 & 84360 & 6811 & 9 & 26 \\
-com.google.android.apps.translate & 7.7.0.540337148.2-release & 1 & 1 & 00:43 & 21799 & 1769 & 3 & 2 \\
+com.google.android.apps.translate & 7.7.0.540337148.2 & 1 & 1 & 00:43 & 21799 & 1769 & 3 & 2 \\
 com.hyundaicard.cultureapp & 1.0.72 & 1 & 1 & 00:48 & 14153 & 2152 & 2 & 3 \\
 com.intsig.BCRLite & 7.85.5.20251016 & 6 & 9 & 05:41 & 195757 & 18587 & 29 & 56 \\
 com.jeju.genie & 2.2.13 & 1 & 1 & 00:33 & 12987 & 2244 & 2 & 3 \\
@@ -137,12 +139,13 @@ com.microsoft.office.outlook & 4.2330.0 & 1 & 1 & 01:34 & 19565 & 2182 & 3 & 5 \
 com.mitake.android.bk.tcb & 3.21.0105 & 1 & 2 & 01:03 & 49766 & 3710 & 8 & 10 \\
 com.mttnow.droid.easyjet & 2.70.0 & 2 & 3 & 01:27 & 80463 & 5835 & 11 & 9 \\
 com.pandora.android & 2509.1 & 1 & 4 & 07:00 & 70891 & 9638 & 8 & 20 \\
-com.qustodio.family.parental.control.app.screentime & 182.16.0 & 1 & 2 & 01:20 & 44536 & 5596 & 6 & 11 \\
+com.qustodio.parental.control.app.screentime & 182.16.0 & 1 & 2 & 01:20 & 44536 & 5596 & 6 & 11 \\
 com.realmestore.app & 1.9.0 & 1 & 1 & 00:43 & 27834 & 1979 & 4 & 10 \\
 com.riffsy.FBMGIFApp & 2.1.61 & 1 & 1 & 00:32 & 34696 & 2000 & 5 & 5 \\
-com.rockbite.deeptown & 6.2.10 & 1 & 1 & 00:17 & 6564 & 1421 & 1 & 0 \\
+com.rockbite.deeptown & 6.2.10 & 1 & 1 & 00:17 & 6564 & 1421 & 1 & 2 \\
 com.rstgames.durak & 1.9.11 & 1 & 1 & 00:36 & 19232 & 1726 & 3 & 3 \\
 com.samsungcard.shopping & 1.4.901 & 1 & 1 & 00:22 & 12380 & 1170 & 2 & 1 \\
+%\hline
 com.shareitagain.whatslov.app & 12.5.0 & 1 & 4 & 02:04 & 161927 & 7541 & 17 & 24 \\
 com.skmc.okcashbag.home\_google & 7.0.8 & 3 & 4 & 02:56 & 93879 & 10606 & 13 & 22 \\
 com.skt.prod.dialer & 13.6.5 & 2 & 7 & 04:38 & 212223 & 12100 & 26 & 26 \\
@@ -182,12 +185,13 @@ ragazzo.alphacode.com.br & 3.0.9 & 1 & 2 & 01:27 & 38671 & 3792 & 5 & 13 \\
 ru.cn.tv & 7.8.16 & 1 & 1 & 00:20 & 20412 & 1492 & 3 & 4 \\
 ru.mw & 4.50.0 & 1 & 1 & 00:36 & 24321 & 2164 & 4 & 7 \\
 sam.myanycar.samsungFire & 6.0.8 & 1 & 1 & 00:40 & 20620 & 2394 & 3 & 5 \\
-stickermaker.stickercreater.whatsappstickers.stickermakerforwhatsapp & 1.01.40.02.08 & 3 & 3 & 02:16 & 78127 & 7106 & 12 & 17 \\
+stickermaker.whatsappstickers & 1.01.40.02.08 & 3 & 3 & 02:16 & 78127 & 7106 & 12 & 17 \\
 tw.com.taishinbank.ccapp & 5.631 & 1 & 2 & 01:38 & 31781 & 4205 & 4 & 10 \\
 tw.gov.tra.twtraffic & 2.1.2 & 1 & 2 & 01:18 & 42834 & 3530 & 5 & 13 \\
 
 \hline
-\multicolumn{2}{|l|}{\textbf{Average:}} & \textbf{02:38} & \textbf{1.76} & \textbf{3.76} & \textbf{133581.92} & \textbf{8364.95} & \textbf{13.89} & \textbf{20.44} \\
+\hline
+\multicolumn{2}{|c|}{\textbf{Averaged values across all applications:}} & \textbf{02:38} & \textbf{1.76} & \textbf{3.76} & \textbf{133581.92} & \textbf{8364.95} & \textbf{13.89} & \textbf{20.44} \\
 \hline
 \caption[Applications evaluated by the triage system.]{Summary of applications used in the evaluation, including per-app method counts, crash counts, processing time, token usage, LLM and tool invocations.}
 \label{tab:apps}\\
