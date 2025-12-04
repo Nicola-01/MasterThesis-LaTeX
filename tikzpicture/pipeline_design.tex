@@ -15,8 +15,8 @@
 \node[io, right=of apk] (poirot) {\textbf{POIROT}\\Fuzzing};
 
 % Row 2: Parsing / setup
-\node[proc, below=of poirot] (crashparser) {\texttt{\textbf{CrashSummary}}\\Crash report parser};
-\node[proc, below=of apk] (setup) {Project setup\\Jadx + Ghidra};
+\node[proc, below=of poirot] (crashparser) {\textbf{Crash parser}\\\texttt{CrashSummary}};
+\node[proc, below=of apk] (setup) {\textbf{Initialization}\\Jadx + Ghidra};
 
 % Row 3: LLM triage agent
 \node[block, below=1.9cm of $(crashparser)!0.5!(setup)$] (agent) {\textbf{LLM triage agent}\\(meta-prompt + JSON schema)};
@@ -33,7 +33,7 @@
 \path[line] (poirot) -- node[right,pos=0.4]{} (crashparser);
 \path[line] (apk) -- node[right,pos=0.4]{} (setup);
 \path[line] (crashparser) -- node[right,pos=0.45]{Crash Context} (agent);
-\path[line] (setup) -- node[left,pos=0.45]{Loaded APKs and libs} (agent);
+\path[line] (setup) -- node[left,pos=0.45]{Load APK and libs} (agent);
 \path[line] (agent) -- node[above]{Vulnerability Triage} (report);
 
 % Dashed MCP/tool-call arrows

@@ -113,7 +113,7 @@ Two widely used coverage-guided engines are American Fuzzy Lop++ (AFL++) (a fork
 
 
 
-\section{\glsxtrlong{llm}}
+\section{Large Language Model}
 \glspl{llm} are deep neural networks based on the Transformer architecture, which replaces recurrence/convolution with stacked self-attention and feed-forward layers to model long-range dependencies efficiently \cite{vaswani2017attention}. Today’s \glspl{llm} are pre-trained on large corpora via next-token prediction and then adapted to follow user prompts. 
 
 \subsection{Limitations and Hallucinations}
@@ -122,7 +122,7 @@ Because \glspl{llm} predict tokens rather than verify facts, they can generate c
 
 
 
-\section{\glsxtrlong{mcp}}
+\section{Model Context Protocol}
 \gls{mcp} is an open protocol, introduced by Anthropic (creator of Claude) in November 2024, that standardises how \gls{ai} applications obtain and manage external context via a client–server architecture.
 An \emph{MCP host} (the \gls{ai} application) connects to one or more \emph{MCP servers} through dedicated \emph{MCP clients}, enabling the host to discover and use tools, read resources, and apply prompts exposed by servers. The protocol separates \emph{data layer} from a \emph{transport layer} (e.g., stdio for local, streamable HTTP for remote), so the same message semantics work across local and remote deployments \cite{mcp-architecture,mcp-intro, mcp-transports}. In brief, servers contribute context and actions; clients manage capability negotiation and exchanges; the host orchestrates everything in the user-facing application \cite{mcp-architecture,mcp-server-concepts,mcp-client-concepts}. Figure~\ref{fig:mcp-simple-diagram} provides a high-level view of this host–client–server pattern and example integrations.
 
@@ -143,7 +143,7 @@ An \gls{mcp} \emph{client} is a protocol-level component created by the host to 
 In Figure~\ref{fig:mcp-interaction}, clients appear as the ''middle`` connectors: they translate host intents (e.g., ''run tool T``) into \gls{api} call and relay the server’s results back to the host.
 
 \subsection{MCP Server}
-An \gls{mcp} \emph{server} wraps external systems (e.g. files, databases, reverse-engineering tools) and presents them as protocol objects. It exposes\textit{tools}, which expose invokable functions with JSON Schemas; \textit{resources}, which provide readable artefacts; and \textit{prompts}, which offer reusable task templates. Servers publish a capability manifest so that clients can discover what is available and how to access it. The \gls{mcp} \emph{server} provides tools that enable \glspl{llm} to perform actions, carry out deterministic computations and interact with external services. 
+An \gls{mcp} \emph{server} wraps external systems (e.g. files, databases, reverse-engineering tools) and presents them as protocol objects. It exposes \textit{tools}, which expose invokable functions with JSON Schemas; \textit{resources}, which provide readable artefacts; and \textit{prompts}, which offer reusable task templates. Servers publish a capability manifest so that clients can discover what is available and how to access it. The \gls{mcp} \emph{server} provides tools that enable \glspl{llm} to perform actions, carry out deterministic computations and interact with external services. 
 This design decouples model/UX from system integrations and enables reuse across different hosts and models \cite{mcp-tools}. 
 In Figure~\ref{fig:mcp-interaction}, servers sit on the right, each encapsulating one integration boundary (e.g., Jadx, Ghidra, a code search index).
 
@@ -152,7 +152,7 @@ In Figure~\ref{fig:mcp-interaction}, servers sit on the right, each encapsulatin
 Figure~\ref{fig:mcp-interaction} illustrates a typical flow. 
 \begin{myenumerate}
   \item The host initialises and lists available servers (or lets the user attach new ones). % cf. MCP architecture
-  \item For each server, the host spawns a client that performs capability discovery (tools/resources/prompts and their schemas). % discovery
+  \item For each server, the host spawns a client that performs capability discovery (tools, resources, prompts and their schemas). % discovery
   \item When the user or an agentic workflow triggers an action, the host selects an appropriate tool and routes a request through the corresponding client to the target server. % routing
   \item The server executes the tool (e.g., get app manifest with Jadx, decompile a function with Ghidra) and returns structured results to the client. % tool exec
   \item The client relays the structured results to the host; the host provides this context to the \gls{llm}, and may chain further tool calls. % host mediation + elicitation

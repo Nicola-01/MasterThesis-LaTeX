@@ -19,7 +19,7 @@ The full source code is available at \href{https://github.com/Nicola-01/LLM-Tria
 %The implementation is intentionally lightweight, relying on a minimal set of Python libraries and external tools. This design choice ensures portability, reproducibility, and compatibility with container-based execution environments.
 Main libraries and tools adopted in this thesis:
 
-\begin{itemize}
+\begin{myitemize}
     \item \textbf{pydantic (v2.12.3)}  
     Used for strict, typed data modelling. Every component in the triage pipeline, from crash summaries to tool responses and vulnerability assessments, conforms to well-defined Pydantic classes.  
     This guarantees deterministic parsing of the LLM outputs, ensures structural validation of all intermediate artefacts, and allows lossless serialisation and deserialisation into JSON.
@@ -33,7 +33,7 @@ Main libraries and tools adopted in this thesis:
     The reverse-engineering backends operate as standalone \glspl{mcp}
     server. Jadx exposes bytecode, manifest, and resource-level information.
     Ghidra exposes disassembly, function listings, and decompilation output.
-\end{itemize}
+\end{myitemize}
 
 The system also depends on the POIROT output directory produced during fuzzing.
 
@@ -86,22 +86,41 @@ Each prompt serves a distinct function and is tailored to the type of informatio
 \begin{itemize}
 
     \item \texttt{AppMetadata\_prompt.py}  
-    Defines the extraction rules and acceptable formats for retrieving application metadata from Jadx.
+    Defines the extraction rules and acceptable formats for retrieving application metadata from Jadx.  
+    The corresponding system prompt is provided in Listing~\ref{lst:appmetadata-prompt}.
 
     \item \texttt{VulnDetection\_prompt.py}  
     Encodes the complete vulnerability-triage logic.  
     It specifies what constitutes a vulnerability, the backward data-flow reasoning process, the conditions for exploitability, and the full JSON schema required for the output.  \\
     A variant of this prompt is used when the \gls{jcg} is unavailable; in this case, the model is not required to reason about the Java-side control flow.  
+    Listing~\ref{lst:systemPrompt} shows the full prompt.
     %Using the standard prompt in such situations proved problematic, as models without Java context tended to treat all inputs as attacker-controlled, leading to misclassifications.
 
     \item \texttt{Shimming\_prompts.py}  
     Defines the system prompts used when interacting with models that lack native \gls{mcp} support.  
     The template includes placeholders into which the required tool descriptions and system instructions are dynamically injected.  
-    It also enforces the appropriate output schema—either metadata extraction or vulnerability assessment, ensuring consistent and predictable behaviour across different backends.
+    It also enforces the appropriate output schema, either metadata extraction or vulnerability assessment, ensuring consistent and predictable behaviour across different backends.
+    Further details are provided in Section~\ref{chp:mcp-shimming}.
     
 \end{itemize}
 
+\begin{lstlisting}[language={},
+caption={System prompt used for extracting application metadata via Jadx MCP.},
+label={lst:appmetadata-prompt}]
+You are a Jadx MCP assistant. Your goal is to extract app metadata from the
+APK currently open in Jadx.
 
+Steps (use MCP tools where applicable):
+1) Get the AndroidManifest.xml (tool: `get_android_manifest`).
+2) Extract the package name from <manifest package="...">.
+3) Extract application label:
+   - If <application android:label="..."> is a literal, use it.
+   - prefer using `search_string` then `get_strings`.
+4) Extract SDK info from <uses-sdk> if present (minSdkVersion, targetSdkVersion).
+5) If versionName or versionCode are available (manifest or packageInfo), include them.
+
+Respond ONLY by populating the output schema.
+\end{lstlisting}
 
 
 %These templates operationalise the prompting strategy described in Chapter~\ref{chp:design}.
@@ -459,7 +478,7 @@ The purpose of the shimming layer is to mediate the interaction in a way that pr
 
 The following pseudo-prompt and pseudo-code summarises the control flow implemented by the shimming layer.
 
-\begin{lstlisting}[caption={Pseudo-prompt of the shimming layer}]
+\begin{lstlisting}[caption={Pseudo-prompt of the shimming layer, label={lst:pseudoPrompt}}]
 You are a tool-using assistant that can use tools to ...
 You can ONLY communicate in JSON.
 

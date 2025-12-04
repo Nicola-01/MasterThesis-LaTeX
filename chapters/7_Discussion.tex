@@ -71,7 +71,7 @@ The model attributes the crash to a memory-safety error in the native MP4 encodi
 
 \medskip
 
-The full classification output for this application is provided in Appendix~\ref{chp:appendixA}. The analysis points to three main contributing factors:
+The full classification output for this application is provided in Appendix~\ref{chp:appendixB}. The analysis points to three main contributing factors:
 
 \begin{itemize}
     \item \textbf{Unvalidated size parameter}: The JNI method \texttt{packVideo} forwards an unbounded, attacker-influenced size directly to the native encoder without consistency checks.

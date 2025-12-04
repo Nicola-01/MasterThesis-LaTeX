@@ -12,7 +12,7 @@ A central element in the design of the crash–triage system is the definition o
 Since the \gls{llm}-based analysis relies on precise, machine-readable context, every stage of the workflow, from parsing POIROT outputs, to extracting application metadata, to producing the final vulnerability assessment, depends on well-defined representations.
 These models constrain how information is encoded, ensure consistency across analyses, and guide the \gls{llm} by enforcing a predictable input and output format.
 
-In this thesis project, all relevant information is captured through strongly typed objects such as \texttt{CrashSummary}, \texttt{AppMetadata}, and \texttt{VulnResult}. Their standardised structure guarantees that the \texttt{CrashSummary} provided to the \gls{llm} have always a consistent structure, divided into clearly defined fields that are explicitly explained in the system prompt and easily interpretable by the model. Likewise, the \texttt{AppMetadata} and \texttt{VulnResult} models allow the system to request a precise and schema-constrained output from the \gls{llm}, which must adhere to the predefined structure.
+In this thesis project, all relevant information is captured through a set of custom data models, \texttt{CrashSummary}, \texttt{AppMetadata}, and \texttt{VulnResult}. Their standardised structure guarantees that the \texttt{CrashSummary} provided to the \gls{llm} have always a consistent structure, divided into clearly defined fields that are explicitly explained in the system prompt and easily interpretable by the model. Likewise, the \texttt{AppMetadata} and \texttt{VulnResult} models allow the system to request a precise and schema-constrained output from the \gls{llm}, which must adhere to the predefined structure.
 
 Instead of asking the model directly whether the app is vulnerable and why, the system instructs the \gls{llm} to populate a fixed JSON template containing all relevant fields, with strict type and content definitions, ensuring that output is both machine- and human-readable. This approach may improve \gls{llm} robustness and reduce variability in classification tasks, because schema-based prompting helps the model focus on the attributes relevant for the decision while avoiding drifting into irrelevant details.
 
@@ -33,8 +33,7 @@ The structured design therefore relies on a set of core data models:
     %This model provides to the agent all the information needed for classification.
 
     \item \textbf{AppMetadata}  
-    Aggregates APK-level information extracted from Jadx, including:\\
-    application name, package name, version code and version name, and minimum/target SDK levels.
+    Aggregates APK-level information extracted from Jadx, including the application name, package name, version code and version name, and the minimum and target SDK levels.
     %This object contextualises the crash within the application environment.
 
     \item \textbf{VulnResult}  
@@ -48,11 +47,13 @@ The structured design therefore relies on a set of core data models:
     %This model enables the \gls{llm} to assess not only the presence of a vulnerability but also its operational impact.
 \end{myitemize}
 
-Additional Structures are:
+Additional structures are:
 
-\textbf{EvidenceItem} stores an piece of evidence used by the \gls{llm} to justify its reasoning, such as a function name, memory address, short decompiled snippet, and an associated explanatory note.  
+\begin{myitemize}
+\item \textbf{EvidenceItem} stores an piece of evidence used by the \gls{llm} to justify its reasoning, such as a function name, memory address, short decompiled snippet, and an associated explanatory note.  
+\item \textbf{Statistics} collects metrics on model usage (tokens, requests, wall-clock time), enabling performance profiling and cost monitoring during large-scale triage.
 
-\noindent\textbf{Statistics} collects metrics on model usage (tokens, requests, wall-clock time), enabling performance profiling and cost monitoring during large-scale triage.
+\end{myitemize}
 
 \medskip
 
@@ -65,7 +66,7 @@ Overall, this strict modelling architecture ensures resilience against malformed
 \section{Prompt Design}\label{chp:prompt}
 
 A central component of the system design is the structure of the prompts used to guide the \gls{llm}.  
-Because the triage procedure requires multi-step reasoning, explicit interaction with \gls{mcp} tools, and the generation of JSON outputs. The quality and organisation of the prompts directly determine the reliability of the analysis.  
+Because the triage procedure requires multi-step reasoning, explicit interaction with \gls{mcp} tools, and the generation of JSON outputs, the quality and organisation of the prompts directly determine the reliability of the analysis.  
 Well-designed prompts reduce ambiguity and also provide a stable decision-making model, ensuring consistent behaviour across different applications and crashes.
 
 %The prompts adopted in this work follow a hybrid structure:  a \textit{system-level meta-prompt} that defines the global reasoning procedure.
@@ -79,31 +80,106 @@ This provides the model with a stable cognitive frame and constrains its behavio
 In addition, the prompt enforces an implicit form of \emph{Chain-of-Thought} reasoning\cite{wei2023chainofthoughtpromptingelicitsreasoning}.  
 Although the internal chain of thought is not exposed in the output, the model multi-step analytical path—starting from the crashing frame, performing backward reasoning, checking reachability, and validating assumptions, before emitting the final classification. 
 
+The full system prompt used in the implementation is reported in Appendix~\ref{chp:appendixA}.
+
 \subsection{Structure of the Prompt}
 
 The prompt used for vulnerability triage is organised into a set of structured components that collectively define the agent's behaviour, analysis procedure, and output constraints.  
 Rather than providing ad-hoc instructions, the prompt specifies a complete operational framework that the \gls{llm} must follow when examining each crash.  
 Its structure can be understood through four conceptual layers.
 
+
+
 \paragraph{1. Role and behavioural specification.}
 The prompt begins by defining the role of the agent, its objectives, and the scope of the analysis.  
 It instructs the model to behave as a vulnerability analyst with access to static-analysis tools, explicitly prohibiting unsupported assumptions, unverifiable statements, and speculative reasoning.  
 Clear behavioural rules constrain how the agent must reason about the crash, how it should handle missing information, and how it should justify its conclusions.
+
+Listing \ref{lst:prompt-role} shows the corresponding section of the prompt.
+
+\begin{lstlisting}[language={}, caption={Role and behavioural specification in the vulnerability-triage prompt.}, label={lst:prompt-role}]
+You are a **senior mobile reverse-engineering & security engineer**.
+You will receive one CrashEntry at a time from a JNI-fuzzing triage pipeline.
+Your task is to decide whether the crash is LIKELY caused by a genuine code vulnerability
+(memory safety, logic bug, or exploitable condition) or NOT.
+Return ONLY a single JSON object that strictly follows the schema below.
+\end{lstlisting}
 
 \paragraph{2. Interpretation of inputs.}
 The prompt describes in detail the meaning and expected use of the inputs provided for each crash: the native stack trace, the JNI bridge method, the \gls{jcg}, and the list of relevant libraries.  
 The model is instructed to integrate these artefacts into a coherent execution path.  
 In particular, it must reconstruct the control flow starting from the point of failure and reason backwards to identify the root cause, assessing whether the crash is plausibly reachable and whether user-controlled data may influence the faulting operation.
 
+Listing \ref{lst:prompt-inputs} reports the exact instructions included in the prompt.
+
+\begin{lstlisting}[language={}, caption={Input interpretation rules provided to the LLM.}, label={lst:prompt-inputs}]
+You will receive the following fields:
+- process_termination
+- stack_trace
+- java_callgraph
+- app_native_function
+- jni_bridge_method
+- fuzz_harness_entry
+- program_entry
+- relevant libraries and their JNI methods
+
+You must integrate all fields into a coherent reconstruction of the failing execution path.
+\end{lstlisting}
+
+
 \paragraph{3. Tool-use protocol.}
 A dedicated section of the prompt specifies how the agent should interact with external tools exposed through the \gls{mcp}.  
 It explains some tool calls, what information can provide, and how retrieved evidence should influence the ongoing analysis.  
 %Ensuring that tool invocations are well integrated into the model’s reasoning loop.
 
+Listing \ref{lst:prompt-tools} shows the relevant portion of the prompt.
+
+\begin{lstlisting}[language={}, caption={Tool-use protocol and mandatory MCP exploration steps.}, label={lst:prompt-tools}]
+You have **Jadx MCP** and **Ghidra MCP** and MUST use them proactively.
+
+Exploration Rules (excerpt):
+1. Resolve thunks/imports:
+   - If the crash is in a wrapper, inspect the caller via `LibMap` and decompile it.
+2. Cross-library search:
+   - If a symbol is missing in one `.so`, check exports in other libraries (...).
+3. JNI root analysis:
+   - Always decompile the App Native Function (JNI entry point).
+4. Java context:
+   - Inspect the `jni_bridge_method` in Jadx to check argument validation.
+
+Steps for each crash (simplified):
+1. Identify the first app-level frame below allocators/sanitizers.
+2. GHIDRA MCP: Decompile the function at that frame.
+3. Backward data-flow: Trace arguments backwards; recurse into callers until JNI or validation.
+4. JNI/Java analysis: Check how Java constructs arguments and whether they are attacker-controlled.
+5. Function-pointer resolution: Resolve indirect calls; if missing, explicitly state uncertainty.
+\end{lstlisting}
+
 \paragraph{4. Structured output requirements.}
 The final part of the prompt imposes strict output constraints.  
 The model must produce a JSON object consistent with a predefined schema, filling fields such as the vulnerability verdict, confidence score, severity, CWE identifiers, and other.
 Each field is accompanied by explicit instructions describing what constitutes a valid value and how the agent should justify its decisions.
+
+Listing \ref{lst:prompt-output} reports the schema-oriented instructions.
+
+\begin{lstlisting}[language={}, caption={Structured output and JSON-schema constraints.}, label={lst:prompt-output}]
+Return a JSON object with:
+- `chain_of_thought`: strings. Write a step-by-step internal monologue BEFORE classifying.
+- `is_vulnerable`: boolean. True if the crash is a vulnerability, false otherwise
+- ...
+
+## 6a. Exploit field requirements (only when is_vulnerable=true)
+When a crash is classified as a real vulnerability:
+1. You MUST provide an `exploit` object with concrete, realistic details.  
+2. The `exploit_pipeline` MUST describe, in 3-5 ordered steps, ...
+3. `poc_commands` MUST include at least one actionable Proof-of-Concept command..
+
+- `exploit`: null OR an object with:
+    - ...
+
+All fields must strictly adhere to the predefined schema.
+\end{lstlisting}
+
 
 \bigskip
 
@@ -147,6 +223,8 @@ These raw crash reports contain the native stack traces, from which the process 
 
 For each crash, the system constructs a corresponding \texttt{CrashSummary} object, which combines the information extracted from the crash report with additional data required for the triage.
 
+The resulting \texttt{CrashSummary} includes the following elements:
+
 \begin{itemize}
     \item \textbf{Native Stack Trace}: The raw output produced by POIROT, consisting of the sequence of native frames leading to the crash.
     \item \textbf{JNI Bridge Method}: Identified by decoding the \gls{jni} signature extracted from the crash, allowing the system to locate the corresponding Java declaration within the \gls{apk} (Listing~\ref{lst:JNI}).
@@ -171,7 +249,7 @@ This stage is purely preparatory: it ensures that the \glspl{mcp} can access all
 
 \subsection{Agent Setup}
 
-Before any crash is analysed, the \gls{llm} agent receives a \emph{system prompt} that defines its role as a vulnerability triage agent and constrains its reasoning process.  
+Before any crash is analysed, the \gls{llm} agent receives a \emph{system prompt} (shown in Listing~\ref{lst:systemPrompt}), that defines its role as a vulnerability triage agent and constrains its reasoning process.  
 This prompt outlines the analysis pipeline the model must follow (see Section~\ref{chp:prompt}), explains how to interpret the inputs provided in the user prompt, and specifies the structure and purpose of the JSON output.  
 It also informs the agent of the available \glspl{mcp} and clarifies when tool calls should be used.  
 
@@ -237,7 +315,7 @@ The additional components—\textbf{Chain-of-Thought (CoT)} and the \textbf{Expl
 
 The \textbf{CoT} field stores the model's internal reasoning steps used \emph{before} classification.  
 Its purpose is not to be shown to a human evaluator, but to keep the model focused on systematic, step-by-step analysis rather than relying on pattern-matching shortcuts.  
-By prompting the model to reason explicitly, the system reduces the likelihood of superficial or hallucinated assessments and encourages the analysis of concrete evidence retrieved via \gls{mcp} tools.  \textcolor{red}{non so se sia veramente così e non ho dei dati, ma mi è apparso così da quando l'ho aggiunta}
+By prompting the model to reason explicitly, the system reduces the likelihood of superficial or hallucinated assessments and encourages the analysis of concrete evidence retrieved via \gls{mcp} tools. % \textcolor{red}{non so se sia veramente così e non ho dei dati, ma mi è apparso così da quando l'ho aggiunta}
 Empirically, the inclusion of \gls{cot} led to more consistent and accurate classifications, reducing false positives.
 
 

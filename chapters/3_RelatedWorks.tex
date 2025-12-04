@@ -13,7 +13,7 @@ This thesis project addresses a timely and relevant topic: the use of \glspl{llm
 The need for scalable triage of crashes, where manual analysis is often slow, labour-intensive, and difficult to apply consistently at scale, has motivated the exploration of \glspl{llm} as a complementary solution. These models can assist, or partially replace, manual inspection by rapidly interpreting crash reports, extracting relevant execution details, and supporting the identification of potential vulnerability patterns.
 
 
-\section{Limitations of LLMs Without Context}
+\section{Lack of Context in LLMs}
 
 Several studies have shown that \glspl{llm} often struggle when analysing security-critical code, especially when key semantic or structural cues are missing. For example, Basic and Giaretta~\cite{basic2024large} report that current models frequently misclassify vulnerabilities when the prompt lacks essential information about the execution environment or the underlying fault mechanism. These limitations suggest that \glspl{llm} rely on superficial patterns when deeper program semantics are inaccessible. In this context, enabling the model to autonomously explore the codebase through the \gls{mcp} framework is a promising direction: allowing the \gls{llm} to retrieve files, inspect call paths, and gather execution context can mitigate the shortcomings of prompt-only approaches and support more reliable crash interpretation.
 
@@ -21,12 +21,15 @@ Several studies have shown that \glspl{llm} often struggle when analysing securi
 
 \section{LLM-Assisted Fuzzing}
 
-Similar limitations of \glspl{llm} have been observed in the fuzzing domain. Jiang et al.\ \cite{jiang2024fuzzing} show that \gls{llm}-assisted fuzzing often fails when models must reason over incomplete or excessively long contexts, leading to inaccurate interpretation of bug-detection signals and weakened semantic understanding. Their findings indicate that providing large amounts of raw code or documentation is ineffective: long, unstructured prompts dilute the model’s ability to track dependencies and increase the likelihood of hallucinations or incorrect inferences.
+\textcolor{red}{---Tutta questa è nuova---}
 
-These observations motivate a more selective strategy for context provision. Rather than supplying the entire codebase, an approach shown to degrade accuracy, allowing the \gls{llm} to retrieve only relevant fragments on demand via the \gls{mcp} constrains the reasoning space to focused, semantically meaningful evidence. This mitigates the long-context limitations highlighted by Jiang et al.\ and supports more stable and interpretable analysis workflows.
+Similar limitations of \glspl{llm} have been observed in the fuzzing domain. Jiang et al.\ \cite{jiang2024fuzzing} show that \gls{llm}-assisted fuzzing often fails when models must reason over incomplete or excessively long contexts, leading to inaccurate interpretation of bug-detection signals and weakened semantic understanding. Their findings indicate that providing large amounts of raw code or documentation is ineffective: long, unstructured prompts reduce the model’s ability to track dependencies and increase the likelihood of hallucinations or incorrect inferences.
 
+These observations motivate a more selective strategy for context provision.  Instead of providing the entire codebase, which has been shown to reduce accuracy, allowing the \gls{llm} to retrieve only relevant fragments on demand via the \gls{mcp} constrains the reasoning space to focused, semantically meaningful evidence. This mitigates the long-context limitations highlighted by Jiang et al.\ and supports more stable and interpretable analysis workflows.
 
 Liu et al.\ propose PromeFuzz\cite{liupromefuzz}, a framework that augments \glspl{llm} with structured information extracted from the target application. Rather than relying solely on function signatures, PromeFuzz builds a knowledge base from code metadata, documentation, and usage correlations, retrieved via \gls{rag} at inference time, while a dedicated sanitizer filters hallucinated or semantically invalid outputs. This combination of structured context and validation substantially improves code coverage and crash-detection accuracy, showing that \glspl{llm} become more reliable when grounded in verifiable program artefacts instead of raw prompt text.
+
+\textcolor{red}{----END----}
 
 %These insights inform the design of this thesis. While PromeFuzz uses retrieved program knowledge to guide driver synthesis, this work applies the same principle to post-fuzzing crash triage: \glspl{llm} analyse crash artefacts enriched with structured evidence—such as call-graph slices and decompiled code retrieved through the \gls{mcp}. This grounding mechanism addresses the limitations highlighted in fuzzing research and supports more reliable, context-aware vulnerability assessment.
 
