@@ -591,8 +591,6 @@ A second input provided to the model through the \texttt{CrashSummary} object is
 The purpose of this artefact is to reconstruct the sequence of Java method invocations that lead to the JNI entry point responsible for calling the native function in which the crash occurred.  
 While the native stack trace already describes the execution path within the \texttt{.so} file, the \gls{jcg} complements it with the higher-level control flow within the application.
 
-\newpage
-
 The extraction is performed in two phases:
 
 \begin{enumerate}
