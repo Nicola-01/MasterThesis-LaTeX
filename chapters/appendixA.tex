@@ -3,4 +3,35 @@
 
 The following listing shows the system prompt used for the vulnerability triage.
 
+
+\begingroup
+
+
+\lstdefinestyle{prompt}{
+    basicstyle=\small\ttfamily\color{black},
+    numbers=left,
+    numberstyle=\scriptsize\color{CodeGray},
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    tabsize=2,
+    breaklines=true,
+    frame=lines,
+    rulecolor=\color{black!30},
+    backgroundcolor=\color{gray!10},          % <── nuovo sfondo grigio chiaro
+    % ---- Keywords tutte in grigio medio ----
+    keywordstyle=\bfseries\color{gray!40},
+    keywordstyle=[2]\bfseries\color{gray!40},
+    keywordstyle=[3]\bfseries\color{gray!40},
+    % ---- Strings / commenti / ecc ----
+    stringstyle=\color{gray!30},
+    commentstyle=\itshape\color{gray!50},
+    captionpos=b,
+    keepspaces=true
+}
+
+\lstset{style=prompt}
+
 \lstinputlisting[language={}, caption={Full system prompt used by the LLM-based vulnerability triage pipeline.}, label={lst:systemPrompt}]  {tikzpicture/systemPrompt.txt}
+
+\endgroup

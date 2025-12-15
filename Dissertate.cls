@@ -239,7 +239,7 @@
 	\input{frontmatter/personalize}
 	\maketitle
 	%\frontispiece
-	%\dedicationpage
+	\dedicationpage
 	\abstractpage
 	\tableofcontents
 	\phantomsection
@@ -274,6 +274,7 @@
 	\thispagestyle{empty}
 	\setcounter{page}{1}
 	\begin{center}
+	%\vbox to0pt{\vbox to\textheight{\vfill \includegraphics[width=11.5cm]{resources/transparent.png} \vfill}\vss}
 	\vbox to0pt{\vbox to\textheight{\vfill \includegraphics[width=11.5cm]{resources/unipd-light} \vfill}\vss}
 	%\vspace*{\fill}
 	\begin{figure}
@@ -485,6 +486,22 @@
 \lstdefinelanguage{json}{
   string=[s]{"}{"},
   stringstyle=\color{SchoolColor},
+  comment=[l]{:},
+  commentstyle=\color{black},
+  basicstyle=\small\ttfamily,
+  numbers=left,
+  numberstyle=\scriptsize,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=lines
+}
+
+
+\lstdefinelanguage{jsonB}{
+  string=[s]{"}{"},
+  stringstyle=\color{black!80},
   comment=[l]{:},
   commentstyle=\color{black},
   basicstyle=\small\ttfamily,
